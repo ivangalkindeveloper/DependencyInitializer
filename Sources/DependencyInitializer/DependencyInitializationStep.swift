@@ -11,40 +11,50 @@ public enum InitializationStepType: Sendable {
     case simple, repeatable;
 }
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-public protocol DependencyInitializationStep: AnyObject, Sendable {
-    associatedtype Process: DependencyInitializationProcess
-
+public protocol DependencyInitializationStep: AnyObject {
     var title: String? { get }
     var type: InitializationStepType { get }
-    var taskPriority: TaskPriority { get }
-    var initialize: (Process) async throws -> Void { get }
 }
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-public final class InitializationStep<Process: DependencyInitializationProcess>: DependencyInitializationStep, Sendable {
-    public typealias Process = Process
-    
+public final class SyncInitializationStep<Process: DIProcess>: DependencyInitializationStep {
     // MARK: - Public properties
     
     public let title: String?
-    public let taskPriority: TaskPriority
     public let type: InitializationStepType
-    public let initialize: @Sendable (Process) async throws -> Void
+    public let run: (Process) throws -> Void
     
     // MARK: - Initialization
     
-    init(
+    public init(
         title: String? = nil,
-        taskPriority: TaskPriority = .medium,
         type: InitializationStepType = .simple,
-        initialize: @Sendable @escaping (Process) async throws -> Void
+        run: @escaping (Process) throws -> Void
+    ) {
+        self.title = title
+        self.type = type
+        self.run = run
+    }
+}
+
+public final class AsyncInitializationStep<Process: DIProcess>: DependencyInitializationStep, Sendable {
+    // MARK: - Public properties
+    
+    public let title: String?
+    public let type: InitializationStepType
+    public let taskPriority: TaskPriority?
+    public let run: @Sendable (Process) async throws -> Void
+    
+    // MARK: - Initialization
+    
+    public init(
+        title: String? = nil,
+        type: InitializationStepType = .simple,
+        taskPriority: TaskPriority? = nil,
+        run: @Sendable @escaping (Process) async throws -> Void
     ) {
         self.title = title
         self.taskPriority = taskPriority
         self.type = type
-        self.initialize = initialize
+        self.run = run
     }
 }

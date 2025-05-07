@@ -3,34 +3,28 @@
 
 import Foundation
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @MainActor
-public final class DependencyInitializer<
-    Process: DependencyInitializationProcess,
-    Step: DependencyInitializationStep,
-    T
->: NSObject where Process.T == T, Step.Process == Process {
+public final class DependencyInitializer<Process: DIProcess, T: Sendable> where Process.T == T {
     // MARK: - Private properties
 
     private let createProcess: () -> Process
-    private let steps: [Step]
+    private let steps: [DIStep]
     private let onStart: (() -> Void)?
-    private let onStartStep: ((Step) -> Void)?
-    private let onSuccessStep: ((Step, Double) -> Void)?
-    private let onSuccess: ((DIResult<Process, Step, T>, Double) -> Void)?
-    private let onError: ((Error, Process, Step, Double) -> Void)?
+    private let onStartStep: ((DIStep) -> Void)?
+    private let onSuccessStep: ((DIStep, Double, Double) -> Void)?
+    private let onSuccess: ((DIResult<Process, T>, Double) -> Void)?
+    private let onError: ((Error, Process, DIStep, Double) -> Void)?
 
     // MARK: - Initialization
 
-    init(
+    public init(
         createProcess: @escaping () -> Process,
-        steps: [Step],
+        steps: [DIStep],
         onStart: (() -> Void)? = nil,
-        onStartStep: ((Step) -> Void)? = nil,
-        onSuccessStep: ((Step, Double) -> Void)? = nil,
-        onSuccess: ((DIResult<Process, Step, T>, Double) -> Void)? = nil,
-        onError: ((Error, Process, Step, Double) -> Void)? = nil
+        onStartStep: ((DIStep) -> Void)? = nil,
+        onSuccessStep: ((DIStep, Double, Double) -> Void)? = nil,
+        onSuccess: ((DIResult<Process, T>, Double) -> Void)? = nil,
+        onError: ((Error, Process, DIStep, Double) -> Void)? = nil
     ) {
         self.createProcess = createProcess
         self.steps = steps
@@ -43,62 +37,137 @@ public final class DependencyInitializer<
     
     // MARK: - Public methods
     
-    func run() async {
+    public func run() {
         assert(self.steps.isEmpty == false, "Step list can't be empty")
         
         let startTime = DispatchTime.now()
-        let currentProcess: Process = self.createProcess()
+        let process: Process = self.createProcess()
         let context = self.getContext()
         
-
-        try? await withThrowingTaskGroup(of: Void.self) { group in
-            for step in steps {
+        if !context.syncSteps.isEmpty {
+            for step in context.syncSteps {
                 guard context.encounteredError == nil else {
-                    group.cancelAll()
                     break
                 }
                 
-                // TODO: - синхронная работа с процессом
-                
-                group.addTask(
-                    priority: step.taskPriority
-                ) { [weak self, weak currentProcess, weak context] in
-                    guard let self = self,
-                          let currentProcess = currentProcess,
-                          let context = context else { return }
-
-                    do {
-                        let stepStartTime = DispatchTime.now()
-                        try await step.initialize(currentProcess)
-                        await MainActor.run {
-                            self.onSuccessStep?(
-                                step,
-                                self.endDispatchTime(stepStartTime)
-                            )
+                self.executeSync(
+                    process: process,
+                    step: step,
+                    context: context,
+                    startTime: startTime
+                )
+            }
+        }
+        
+        if !context.asyncSteps.isEmpty {
+            Task {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    for step in context.asyncSteps {
+                        guard context.encounteredError == nil else {
+                            return group.cancelAll()
                         }
-                    } catch {
-
-                        await MainActor.run {
-                            if context.encounteredError == nil {
-                                context.encounteredError = error
-                            }
-                            self.onError?(
-                                error,
-                                currentProcess,
-                                step,
-                                self.endDispatchTime(startTime)
+                                                
+                        group.addTask(
+                            priority: step.taskPriority
+                        ) {
+                            await self.executeAsync(
+                                process: process,
+                                step: step,
+                                context: context,
+                                startTime: startTime
                             )
                         }
                     }
+                            
+                    try await group.waitForAll()
+                    self.executeSuccess(
+                        process: process,
+                        context: context,
+                        startTime: startTime
+                    )
                 }
             }
-            
-            try await group.waitForAll()
+        } else {
+            self.executeSuccess(
+                process: process,
+                context: context,
+                startTime: startTime
+            )
         }
-
+    }
+        
+    // MARK: - Private methods
+    
+    private func executeSync(
+        process: Process,
+        step: SyncInitializationStep<Process>,
+        context: Context<Process>,
+        startTime: DispatchTime,
+    ) {
+        do {
+            let stepStartTime = DispatchTime.now()
+            try step.run(process)
+            self.onSuccessStep?(
+                step,
+                self.endDispatchTime(stepStartTime),
+                self.endDispatchTime(startTime)
+            )
+        } catch {
+            guard context.encounteredError == nil else {
+                return
+            }
+            
+            context.encounteredError = error
+            self.onError?(
+                error,
+                process,
+                step,
+                self.endDispatchTime(startTime)
+            )
+        }
+    }
+    
+    private func executeAsync(
+        process: Process,
+        step: AsyncInitializationStep<Process>,
+        context: Context<Process>,
+        startTime: DispatchTime,
+    ) async {
+        do {
+            let stepStartTime = DispatchTime.now()
+            try await step.run(process)
+            self.onSuccessStep?(
+                step,
+                self.endDispatchTime(stepStartTime),
+                self.endDispatchTime(startTime)
+            )
+        } catch {
+            guard context.encounteredError == nil else {
+                return
+            }
+            
+            context.encounteredError = error
+            self.onError?(
+                error,
+                process,
+                step,
+                self.endDispatchTime(startTime)
+            )
+        }
+    }
+    
+    private func executeSuccess(
+        process: Process,
+        context: Context<Process>,
+        startTime: DispatchTime,
+    ) {
+        guard context.encounteredError == nil else {
+            return
+        }
+        
         self.onSuccess?(
-            DependencyInitializationResult(
-                result: currentProcess.toResult,
+            DependencyInitializationResult<Process, T>(
+                result: process.toResult,
                 reinitializationStepList: context.repeatSteps,
                 runRepeat: self.runRepeat(
                     repeatSteps: context.repeatSteps
@@ -108,11 +177,6 @@ public final class DependencyInitializer<
         )
     }
     
-    
-    // MARK: - Private methods
-    
-    private func executeStep() {}
-    
     private func endDispatchTime(
         _ start: DispatchTime
     ) -> Double {
@@ -121,38 +185,47 @@ public final class DependencyInitializer<
         return Double(difference)
     }
     
-    private func getContext() -> Context<Step> {
-        var repeatSteps: [Step] = []
+    private func getContext() -> Context<Process> {
+        var syncSteps: [SyncInitializationStep<Process>] = []
+        var asyncSteps: [AsyncInitializationStep<Process>] = []
+        var repeatSteps: [DIStep] = []
         
         for step in self.steps {
+            if let step = step as? SyncInitializationStep<Process> {
+                syncSteps.append(step)
+            }
+            if let step = step as? AsyncInitializationStep<Process> {
+                asyncSteps.append(step)
+            }
+            
             switch step.type {
             case .simple:
                 break
             case .repeatable:
                 repeatSteps.append(step)
-                break
             }
         }
         
-        return Context(
+        return Context<Process>(
+            syncSteps: syncSteps,
+            asyncSteps: asyncSteps,
             repeatSteps: repeatSteps,
-
         )
     }
     
     private func runRepeat(
-        repeatSteps: [Step]
-    ) -> DIRepeatFunction<Process, Step, T> {
+        repeatSteps: [DIStep]
+    ) -> DIRepeatCallback<Process, T> {
         return {
             createProcess,
-            steps,
-            onStart,
-            onStartStep,
-            onSuccessStep,
-            onSuccess,
-            onError in
+                steps,
+                onStart,
+                onStartStep,
+                onSuccessStep,
+                onSuccess,
+                onError in
             
-            await DependencyInitializer(
+            DependencyInitializer(
                 createProcess: createProcess ?? self.createProcess,
                 steps: steps ?? repeatSteps,
                 onStart: onStart ?? self.onStart,

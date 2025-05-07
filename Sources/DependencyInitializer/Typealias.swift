@@ -7,22 +7,16 @@
 
 public typealias DIProcess = DependencyInitializationProcess
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
 public typealias DIStep = DependencyInitializationStep
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
 public typealias DIResult = DependencyInitializationResult
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
-public typealias DIRepeatFunction<Process: DependencyInitializationProcess, Step: DependencyInitializationStep, T> = (
+public typealias DIRepeatCallback<Process: DependencyInitializationProcess, T> = (
     _ createProcess: (() -> Process)?,
-    _ steps: [Step]?,
+    _ steps: [DIStep]?,
     _ onStart: (() -> Void)?,
-    _ onStartStep: ((Step) -> Void)?,
-    _ onSuccessStep: ((Step, Double) -> Void)?,
-    _ onSuccess: ((DIResult<Process, Step, T>, Double) -> Void)?,
-    _ onError: ((Error, Process, Step, Double) -> Void)?
+    _ onStartStep: ((DIStep) -> Void)?,
+    _ onSuccessStep: ((DIStep, Double, Double) -> Void)?,
+    _ onSuccess: ((DIResult<Process, T>, Double) -> Void)?,
+    _ onError: ((Error, Process, DIStep, Double) -> Void)?
 ) async -> Void

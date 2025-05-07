@@ -5,17 +5,24 @@
 //  Created by Иван Галкин on 04.05.2025.
 //
 
-@available(iOS 13.0, *)
-@available(macOS 10.15, *)
 @MainActor
-class Context<Step: DependencyInitializationStep>: Sendable {
+final class Context<Process: DIProcess>: Sendable {
+    // MARK: - Public properties
+    
+    let syncSteps: [SyncInitializationStep<Process>]
+    let asyncSteps: [AsyncInitializationStep<Process>]
+    let repeatSteps: [DIStep]
+    var encounteredError: Error?
+    
+    // MARK: - Initialization
     
     init(
-        repeatSteps: [Step]
+        syncSteps: [SyncInitializationStep<Process>],
+        asyncSteps: [AsyncInitializationStep<Process>],
+        repeatSteps: [DIStep]
     ) {
+        self.syncSteps = syncSteps
+        self.asyncSteps = asyncSteps
         self.repeatSteps = repeatSteps
     }
-    
-    let repeatSteps: [Step]
-    var encounteredError: Error?
 }
