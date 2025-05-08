@@ -34,7 +34,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             }
         )
         initializer.run()
-        self.window?.makeKeyAndVisible()
     }
 }
 
@@ -65,5 +64,6 @@ private extension SceneDelegate {
         self.window?.rootViewController = UINavigationController(
             rootViewController: viewController
         )
+        self.window?.makeKeyAndVisible()
     }
 }

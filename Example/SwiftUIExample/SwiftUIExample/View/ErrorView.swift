@@ -13,7 +13,7 @@ struct ErrorView: View {
     var body: some View {
         Text("\(error)")
             .padding()
-            .navigationTitle("Main Screen")
+            .navigationTitle("Error Screen")
     }
 }
 

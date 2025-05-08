@@ -43,90 +43,70 @@ public final class DependencyInitializer<Process: DIProcess, T: Sendable> where 
         let startTime = DispatchTime.now()
         let process: Process = self.createProcess()
         let context = self.getContext()
-        
+
         if !context.syncSteps.isEmpty {
-            for step in context.syncSteps {
-                guard context.encounteredError == nil else {
-                    break
+            var currentSyncStep = context.syncSteps.first!;
+            
+            do {
+                for step in context.syncSteps {
+                    currentSyncStep = step
+                    let stepStartTime = DispatchTime.now()
+                    try step.run(process)
+                    self.onSuccessStep?(
+                        step,
+                        self.endDispatchTime(stepStartTime),
+                        self.endDispatchTime(startTime)
+                    )
                 }
                 
-                self.executeSync(
-                    process: process,
-                    step: step,
-                    context: context,
-                    startTime: startTime
-                )
-            }
-        }
-        
-        if !context.asyncSteps.isEmpty {
-            Task {
-                try await withThrowingTaskGroup(of: Void.self) { group in
-                    for step in context.asyncSteps {
-                        guard context.encounteredError == nil else {
-                            return group.cancelAll()
-                        }
-                                                
-                        group.addTask(
-                            priority: step.taskPriority
-                        ) {
-                            await self.executeAsync(
-                                process: process,
-                                step: step,
-                                context: context,
-                                startTime: startTime
-                            )
-                        }
-                    }
-                            
-                    try await group.waitForAll()
-                    self.executeSuccess(
+                if context.asyncSteps.isEmpty {
+                    return self.executeSuccess(
                         process: process,
                         context: context,
                         startTime: startTime
                     )
                 }
+            } catch {
+                self.onError?(
+                    error,
+                    process,
+                    currentSyncStep,
+                    self.endDispatchTime(startTime)
+                )
             }
-        } else {
-            self.executeSuccess(
-                process: process,
-                context: context,
-                startTime: startTime
-            )
+        }
+        
+        Task {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for step in context.asyncSteps {
+                    guard context.encounteredError == nil else {
+                        return group.cancelAll()
+                    }
+                                            
+                    group.addTask(
+                        priority: step.taskPriority
+                    ) {
+                        await self.executeAsync(
+                            process: process,
+                            step: step,
+                            context: context,
+                            startTime: startTime
+                        )
+                    }
+                }
+                        
+                try await group.waitForAll()
+                self.executeSuccess(
+                    process: process,
+                    context: context,
+                    startTime: startTime
+                )
+            }
         }
     }
         
     // MARK: - Private methods
-    
-    private func executeSync(
-        process: Process,
-        step: SyncInitializationStep<Process>,
-        context: Context<Process>,
-        startTime: DispatchTime,
-    ) {
-        do {
-            let stepStartTime = DispatchTime.now()
-            try step.run(process)
-            self.onSuccessStep?(
-                step,
-                self.endDispatchTime(stepStartTime),
-                self.endDispatchTime(startTime)
-            )
-        } catch {
-            guard context.encounteredError == nil else {
-                return
-            }
-            
-            context.encounteredError = error
-            self.onError?(
-                error,
-                process,
-                step,
-                self.endDispatchTime(startTime)
-            )
-        }
-    }
-    
+        
     private func executeAsync(
         process: Process,
         step: AsyncInitializationStep<Process>,

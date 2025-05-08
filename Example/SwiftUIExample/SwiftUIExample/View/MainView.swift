@@ -11,7 +11,7 @@ struct MainView: View {
     let initialCatFact: CatFact
 
     var body: some View {
-        Text(initialCatFact.text)
+        Text(initialCatFact.fact)
             .padding()
             .navigationTitle("Main Screen")
     }
@@ -20,8 +20,8 @@ struct MainView: View {
 #Preview {
     MainView(
         initialCatFact: CatFact(
-            text: "Cat Fact",
-            updatedAt: ""
+            fact: "Cat Fact",
+            length: 0
         )
     )
 }

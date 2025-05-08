@@ -38,7 +38,7 @@ class MainViewController: UIViewController {
         self.title = "Main Screen"
         self.view.backgroundColor = .systemBackground
         
-        self.label.text = self.initialCatFact.text
+        self.label.text = self.initialCatFact.fact
         self.view.addSubview(label)
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: view.centerXAnchor),

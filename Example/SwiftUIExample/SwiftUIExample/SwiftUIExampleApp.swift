@@ -31,16 +31,19 @@ class AppState: ObservableObject {
             createProcess: { InitializationProcess() },
             steps: AppState.initializeSteps,
             onSuccess: { [weak self] result, _ in
-                self?.root =
+                self?.root = NavigationStack {
                     MainView(
                         initialCatFact: result.result.initialCatFact
                     )
+                }
+
             },
             onError: { [weak self] error, _, _, _ in
-                self?.root =
+                self?.root = NavigationStack {
                     ErrorView(
                         error: error
                     )
+                }
             }
         )
         initializer.run()

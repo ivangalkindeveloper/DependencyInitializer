@@ -6,6 +6,6 @@
 //
 
 struct CatFact: Codable {
-    let text: String
-    let updatedAt: String
+    let fact: String
+    let length: Int
 }

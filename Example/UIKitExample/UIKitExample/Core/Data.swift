@@ -15,11 +15,13 @@ final class EntityService: HttpService {
     func getCatFact() async throws -> CatFact {
         let (data, _) = try await URLSession.shared.data(
             for: URLRequest(
-                url: URL(string: "https://cat-fact.herokuapp.com/facts/random")!
+                url: URL(
+                    string: "https://catfact.ninja/fact"
+                )!
             )
         )
-        
-        return try JSONDecoder().decode([CatFact].self, from: data).first!
+
+        return try JSONDecoder().decode(CatFact.self, from: data)
     }
 }
 
