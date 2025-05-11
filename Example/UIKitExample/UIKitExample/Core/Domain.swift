@@ -1,5 +1,5 @@
 //
-//  CatFact.swift
+//  Domain.swift
 //  UIKitExample
 //
 //  Created by Иван Галкин on 08.05.2025.

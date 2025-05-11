@@ -27,6 +27,7 @@ class MainViewController: UIViewController {
     
     private let label: UILabel = {
         let view = UILabel()
+        view.numberOfLines = 0
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -41,8 +42,10 @@ class MainViewController: UIViewController {
         self.label.text = self.initialCatFact.fact
         self.view.addSubview(label)
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            label.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            label.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 20),
+            label.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -20),
+            label.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
     

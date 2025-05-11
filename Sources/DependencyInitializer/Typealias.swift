@@ -9,6 +9,8 @@ public typealias DIProcess = DependencyInitializationProcess
 
 public typealias DIStep = DependencyInitializationStep
 
+public typealias DIStepType = DependencyInitializationStepType
+
 public typealias DIResult = DependencyInitializationResult
 
 public typealias DIRepeatCallback<Process: DependencyInitializationProcess, T> = (
@@ -19,4 +21,4 @@ public typealias DIRepeatCallback<Process: DependencyInitializationProcess, T> =
     _ onSuccessStep: ((DIStep, Double, Double) -> Void)?,
     _ onSuccess: ((DIResult<Process, T>, Double) -> Void)?,
     _ onError: ((Error, Process, DIStep, Double) -> Void)?
-) async -> Void
+) -> Void

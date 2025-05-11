@@ -7,11 +7,19 @@
 
 import Foundation
 
+protocol Environment {}
+final class BaseEnvironment: Environment {}
+
 protocol HttpService: AnyObject {
+    var environment: Environment { get }
     func getCatFact() async throws -> CatFact
 }
-
 final class EntityService: HttpService {
+    init (environment: Environment) {
+        self.environment = environment
+    }
+    let environment: Environment
+    
     func getCatFact() async throws -> CatFact {
         let (data, _) = try await URLSession.shared.data(
             for: URLRequest(
@@ -25,8 +33,31 @@ final class EntityService: HttpService {
     }
 }
 
-protocol Database: AnyObject {}
-final class EntityDatabase: Database {}
+protocol Database: AnyObject {
+    var environment: Environment { get }
+}
+final class EntityDatabase: Database {
+    init (environment: Environment) {
+        self.environment = environment
+    }
+    let environment: Environment
+}
 
-protocol Repository: AnyObject {}
-final class EntityRepository: Repository {}
+protocol Repository: AnyObject {
+    var service: HttpService { get }
+    var database: Database { get }
+    
+    func getCatFact() async throws -> CatFact
+}
+final class EntityRepository: Repository {
+    init(service: HttpService, database: Database) {
+        self.service = service
+        self.database = database
+    }
+    let service: HttpService
+    let database: Database
+    
+    func getCatFact() async throws -> CatFact {
+        try await self.service.getCatFact()
+    }
+}

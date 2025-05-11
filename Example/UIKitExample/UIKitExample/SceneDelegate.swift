@@ -15,13 +15,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let scene = (scene as? UIWindowScene) else { return }
         self.window = UIWindow(windowScene: scene)
 
-        let initializer = DependencyInitializer<InitializationProcess, Dependency>(
+        DependencyInitializer<InitializationProcess, Dependency>(
             createProcess: { InitializationProcess() },
-            steps: SceneDelegate.initializeSteps,
+            steps: SceneDelegate.initializationSteps,
             onSuccess: { result, _ in
                 self.setViewController(
                     MainViewController(
-                        initialCatFact: result.result.initialCatFact
+                        initialCatFact: result.container.initialCatFact
                     )
                 )
             },
@@ -32,25 +32,32 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                     )
                 )
             }
-        )
-        initializer.run()
+        ).run()
     }
 }
 
 private extension SceneDelegate {
-    private static let initializeSteps: [DependencyInitializationStep] = [
-        SyncInitializationStep<InitializationProcess>(
+    private static let initializationSteps: [DependencyInitializationStep] = [
+        InitializationStep<InitializationProcess>(
             title: "Data",
             run: { process in
-                process.service = EntityService()
-                process.database = EntityDatabase()
-                process.repository = EntityRepository()
+                process.environment = BaseEnvironment()
+                process.service = EntityService(
+                    environment: process.environment!
+                )
+                process.database = EntityDatabase(
+                    environment: process.environment!
+                )
+                process.repository = EntityRepository(
+                    service: process.service!,
+                    database: process.database!
+                )
             }
         ),
         AsyncInitializationStep<InitializationProcess>(
             title: "Cat Fact",
             run: { process in
-                let catFact = try await process.service!.getCatFact()
+                let catFact = try await process.repository!.getCatFact()
                 await MainActor.run {
                     process.initialCatFact = catFact
                 }

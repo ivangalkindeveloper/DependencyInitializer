@@ -9,5 +9,5 @@
 public protocol DependencyInitializationProcess: AnyObject, Sendable {
     associatedtype T
     
-    var toResult: T { get }
+    var toContainer: T { get }
 }

@@ -5,29 +5,23 @@
 //  Created by Иван Галкин on 01.05.2025.
 //
 
-import Foundation
-
-public enum InitializationStepType: Sendable {
-    case simple, repeatable;
-}
-
 public protocol DependencyInitializationStep: AnyObject {
     var title: String? { get }
-    var type: InitializationStepType { get }
+    var type: DIStepType { get }
 }
 
-public final class SyncInitializationStep<Process: DIProcess>: DependencyInitializationStep {
+public final class InitializationStep<Process: DIProcess>: DIStep {
     // MARK: - Public properties
     
     public let title: String?
-    public let type: InitializationStepType
+    public let type: DIStepType
     public let run: (Process) throws -> Void
     
     // MARK: - Initialization
     
     public init(
         title: String? = nil,
-        type: InitializationStepType = .simple,
+        type: DIStepType = .simple,
         run: @escaping (Process) throws -> Void
     ) {
         self.title = title
@@ -36,11 +30,11 @@ public final class SyncInitializationStep<Process: DIProcess>: DependencyInitial
     }
 }
 
-public final class AsyncInitializationStep<Process: DIProcess>: DependencyInitializationStep, Sendable {
+public final class AsyncInitializationStep<Process: DIProcess>: DIStep, Sendable {
     // MARK: - Public properties
     
     public let title: String?
-    public let type: InitializationStepType
+    public let type: DIStepType
     public let taskPriority: TaskPriority?
     public let run: @Sendable (Process) async throws -> Void
     
@@ -48,7 +42,7 @@ public final class AsyncInitializationStep<Process: DIProcess>: DependencyInitia
     
     public init(
         title: String? = nil,
-        type: InitializationStepType = .simple,
+        type: DIStepType = .simple,
         taskPriority: TaskPriority? = nil,
         run: @Sendable @escaping (Process) async throws -> Void
     ) {

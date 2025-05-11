@@ -27,16 +27,15 @@ class AppState: ObservableObject {
     @Published var root: any View = EmptyView()
 
     func initialize() {
-        let initializer = DependencyInitializer<InitializationProcess, Dependency>(
+        DependencyInitializer<InitializationProcess, Dependency>(
             createProcess: { InitializationProcess() },
-            steps: AppState.initializeSteps,
+            steps: AppState.initializationSteps,
             onSuccess: { [weak self] result, _ in
                 self?.root = NavigationStack {
                     MainView(
-                        initialCatFact: result.result.initialCatFact
+                        initialCatFact: result.container.initialCatFact
                     )
                 }
-
             },
             onError: { [weak self] error, _, _, _ in
                 self?.root = NavigationStack {
@@ -45,25 +44,32 @@ class AppState: ObservableObject {
                     )
                 }
             }
-        )
-        initializer.run()
+        ).run()
     }
 }
 
 private extension AppState {
-    private static let initializeSteps: [DependencyInitializationStep] = [
-        SyncInitializationStep<InitializationProcess>(
+    private static let initializationSteps: [DependencyInitializationStep] = [
+        InitializationStep<InitializationProcess>(
             title: "Data",
             run: { process in
-                process.service = EntityService()
-                process.database = EntityDatabase()
-                process.repository = EntityRepository()
+                process.environment = BaseEnvironment()
+                process.service = EntityService(
+                    environment: process.environment!
+                )
+                process.database = EntityDatabase(
+                    environment: process.environment!
+                )
+                process.repository = EntityRepository(
+                    service: process.service!,
+                    database: process.database!
+                )
             }
         ),
         AsyncInitializationStep<InitializationProcess>(
             title: "Cat Fact",
             run: { process in
-                let catFact = try await process.service!.getCatFact()
+                let catFact = try await process.repository!.getCatFact()
                 await MainActor.run {
                     process.initialCatFact = catFact
                 }

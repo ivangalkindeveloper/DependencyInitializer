@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 public final class DependencyInitializer<Process: DIProcess, T: Sendable> where Process.T == T {
     // MARK: - Private properties
-
+    
     private let createProcess: () -> Process
     private let steps: [DIStep]
     private let onStart: (() -> Void)?
@@ -14,9 +14,9 @@ public final class DependencyInitializer<Process: DIProcess, T: Sendable> where 
     private let onSuccessStep: ((DIStep, Double, Double) -> Void)?
     private let onSuccess: ((DIResult<Process, T>, Double) -> Void)?
     private let onError: ((Error, Process, DIStep, Double) -> Void)?
-
+    
     // MARK: - Initialization
-
+    
     public init(
         createProcess: @escaping () -> Process,
         steps: [DIStep],
@@ -34,145 +34,42 @@ public final class DependencyInitializer<Process: DIProcess, T: Sendable> where 
         self.onSuccess = onSuccess
         self.onError = onError
     }
-    
-    // MARK: - Public methods
-    
-    public func run() {
-        assert(self.steps.isEmpty == false, "Step list can't be empty")
-        
-        let startTime = DispatchTime.now()
-        let process: Process = self.createProcess()
-        let context = self.getContext()
+}
 
-        if !context.syncSteps.isEmpty {
-            var currentSyncStep = context.syncSteps.first!;
-            
-            do {
-                for step in context.syncSteps {
-                    currentSyncStep = step
-                    let stepStartTime = DispatchTime.now()
-                    try step.run(process)
-                    self.onSuccessStep?(
-                        step,
-                        self.endDispatchTime(stepStartTime),
-                        self.endDispatchTime(startTime)
-                    )
-                }
-                
-                if context.asyncSteps.isEmpty {
-                    return self.executeSuccess(
-                        process: process,
-                        context: context,
-                        startTime: startTime
-                    )
-                }
-            } catch {
-                self.onError?(
-                    error,
-                    process,
-                    currentSyncStep,
-                    self.endDispatchTime(startTime)
-                )
-            }
-        }
+// MARK: - Public methods
+
+public extension DependencyInitializer {
+    func run() {
+        assert(
+            self.steps.isEmpty == false,
+            "Step list can't be empty"
+        )
         
-        Task {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                for step in context.asyncSteps {
-                    guard context.encounteredError == nil else {
-                        return group.cancelAll()
-                    }
-                                            
-                    group.addTask(
-                        priority: step.taskPriority
-                    ) {
-                        await self.executeAsync(
-                            process: process,
-                            step: step,
-                            context: context,
-                            startTime: startTime
-                        )
-                    }
-                }
-                        
-                try await group.waitForAll()
-                self.executeSuccess(
-                    process: process,
-                    context: context,
-                    startTime: startTime
-                )
-            }
-        }
-    }
+        let context: Context = self.getContext()
+        self.onStart?()
         
-    // MARK: - Private methods
+        self.executeSteps(
+            context: context,
+        )
         
-    private func executeAsync(
-        process: Process,
-        step: AsyncInitializationStep<Process>,
-        context: Context<Process>,
-        startTime: DispatchTime,
-    ) async {
-        do {
-            let stepStartTime = DispatchTime.now()
-            try await step.run(process)
-            self.onSuccessStep?(
-                step,
-                self.endDispatchTime(stepStartTime),
-                self.endDispatchTime(startTime)
-            )
-        } catch {
-            guard context.encounteredError == nil else {
-                return
-            }
-            
-            context.encounteredError = error
-            self.onError?(
-                error,
-                process,
-                step,
-                self.endDispatchTime(startTime)
-            )
-        }
-    }
-    
-    private func executeSuccess(
-        process: Process,
-        context: Context<Process>,
-        startTime: DispatchTime,
-    ) {
-        guard context.encounteredError == nil else {
-            return
-        }
-        
-        self.onSuccess?(
-            DependencyInitializationResult<Process, T>(
-                result: process.toResult,
-                reinitializationStepList: context.repeatSteps,
-                runRepeat: self.runRepeat(
-                    repeatSteps: context.repeatSteps
-                ),
-            ),
-            self.endDispatchTime(startTime)
+        self.executeAsyncSteps(
+            context: context,
         )
     }
-    
-    private func endDispatchTime(
-        _ start: DispatchTime
-    ) -> Double {
-        let end = DispatchTime.now()
-        let difference: UInt64 = end.uptimeNanoseconds - start.uptimeNanoseconds
-        return Double(difference)
-    }
-    
-    private func getContext() -> Context<Process> {
-        var syncSteps: [SyncInitializationStep<Process>] = []
+}
+
+// MARK: - Private methods
+
+private extension DependencyInitializer {
+    func getContext() -> Context<Process> {
+        let process = self.createProcess()
+        var steps: [InitializationStep<Process>] = []
         var asyncSteps: [AsyncInitializationStep<Process>] = []
         var repeatSteps: [DIStep] = []
         
         for step in self.steps {
-            if let step = step as? SyncInitializationStep<Process> {
-                syncSteps.append(step)
+            if let step = step as? InitializationStep<Process> {
+                steps.append(step)
             }
             if let step = step as? AsyncInitializationStep<Process> {
                 asyncSteps.append(step)
@@ -187,16 +84,139 @@ public final class DependencyInitializer<Process: DIProcess, T: Sendable> where 
         }
         
         return Context<Process>(
-            syncSteps: syncSteps,
+            process: process,
+            steps: steps,
             asyncSteps: asyncSteps,
-            repeatSteps: repeatSteps,
+            repeatSteps: repeatSteps
         )
     }
     
-    private func runRepeat(
-        repeatSteps: [DIStep]
+    func executeSteps(
+        context: Context<Process>,
+    ) {
+        guard !context.steps.isEmpty else {
+            return
+        }
+        
+        var currentStep: InitializationStep = context.steps.first!
+        do {
+            for step in context.steps {
+                currentStep = step
+                let stepStartTime = DispatchTime.now()
+                try step.run(context.process)
+                self.onSuccessStep?(
+                    step,
+                    self.endDispatchTime(stepStartTime),
+                    self.endDispatchTime(context.startTime)
+                )
+            }
+                
+            if context.asyncSteps.isEmpty {
+                return self.executeSuccess(
+                    context: context
+                )
+            }
+        } catch {
+            context.catchError(error)
+            self.onError?(
+                error,
+                context.process,
+                currentStep,
+                self.endDispatchTime(context.startTime)
+            )
+        }
+    }
+    
+    func executeAsyncSteps(
+        context: Context<Process>,
+    ) {
+        guard !context.asyncSteps.isEmpty, context.error == nil else {
+            return
+        }
+        
+        Task {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for step in context.asyncSteps {
+                    guard context.error == nil else {
+                        return group.cancelAll()
+                    }
+                        
+                    group.addTask(
+                        priority: step.taskPriority
+                    ) {
+                        await self.executeAsync(
+                            context: context,
+                            step: step
+                        )
+                    }
+                }
+                    
+                try await group.waitForAll()
+                self.executeSuccess(
+                    context: context
+                )
+            }
+        }
+    }
+    
+    func executeAsync(
+        context: Context<Process>,
+        step: AsyncInitializationStep<Process>
+    ) async {
+        do {
+            let stepStartTime = DispatchTime.now()
+            try await step.run(context.process)
+            self.onSuccessStep?(
+                step,
+                self.endDispatchTime(stepStartTime),
+                self.endDispatchTime(context.startTime)
+            )
+        } catch {
+            guard context.error == nil else {
+                return
+            }
+            
+            context.catchError(error)
+            self.onError?(
+                error,
+                context.process,
+                step,
+                self.endDispatchTime(context.startTime)
+            )
+        }
+    }
+    
+    func executeSuccess(
+        context: Context<Process>,
+    ) {
+        guard context.error == nil else {
+            return
+        }
+        
+        self.onSuccess?(
+            DependencyInitializationResult<Process, T>(
+                container: context.process.toContainer,
+                reinitializationStepList: context.repeatSteps,
+                runRepeat: self.runRepeat(
+                    context: context
+                ),
+            ),
+            self.endDispatchTime(context.startTime)
+        )
+    }
+    
+    func endDispatchTime(
+        _ start: DispatchTime
+    ) -> Double {
+        let end = DispatchTime.now()
+        let difference: UInt64 = end.uptimeNanoseconds - start.uptimeNanoseconds
+        return Double(difference)
+    }
+    
+    func runRepeat(
+        context: Context<Process>,
     ) -> DIRepeatCallback<Process, T> {
-        return {
+        {
             createProcess,
                 steps,
                 onStart,
@@ -207,7 +227,7 @@ public final class DependencyInitializer<Process: DIProcess, T: Sendable> where 
             
             DependencyInitializer(
                 createProcess: createProcess ?? self.createProcess,
-                steps: steps ?? repeatSteps,
+                steps: steps ?? context.repeatSteps,
                 onStart: onStart ?? self.onStart,
                 onStartStep: onStartStep ?? self.onStartStep,
                 onSuccessStep: onSuccessStep ?? self.onSuccessStep,

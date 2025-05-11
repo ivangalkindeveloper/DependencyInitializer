@@ -7,19 +7,16 @@
 
 final class Dependency {
     init(
-        service: HttpService,
-        database: Database,
+        environment: Environment,
         repository: Repository,
         initialCatFact: CatFact
     ) {
-        self.service = service
-        self.database = database
+        self.environment = environment
         self.repository = repository
         self.initialCatFact = initialCatFact
     }
     
-    let service: HttpService
-    let database: Database
+    let environment: Environment
     let repository: Repository
     let initialCatFact: CatFact
 }

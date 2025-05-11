@@ -10,16 +10,16 @@ import DependencyInitializer
 final class InitializationProcess: DependencyInitializationProcess {
     typealias T = Dependency
     
+    var environment: Environment?
     var service: HttpService?
     var database: Database?
     var repository: Repository?
     var initialCatFact: CatFact?
     
-    var toResult: Dependency {
+    var toContainer: Dependency {
         get {
             Dependency(
-                service: self.service!,
-                database: self.database!,
+                environment: self.environment!,
                 repository: self.repository!,
                 initialCatFact: self.initialCatFact!
             )
