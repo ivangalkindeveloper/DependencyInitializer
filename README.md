@@ -63,10 +63,10 @@ final class InitializationProcess: DependencyInitializationProcess {
 }
 ```
 ## Steps
-[DependencyInitializationStepType](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStepType.swift) - step execution type:
-simple - the step is executed once, this is useful for example for initializing Firebase, database and other integration packages.
-repeatable - the step is executed and remembered for further repeated execution when calling re-initialization using the runRepeat function.
-[InitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - async execution step in the current main thread.
+[DependencyInitializationStepType](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStepType.swift) - step execution type:\
+simple - the step is executed once, this is useful for example for initializing Firebase, database and other integration packages.\
+repeatable - the step is executed and remembered for further repeated execution when calling re-initialization using the runRepeat function.\
+[InitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - async execution step in the current main thread.\
 [AsyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - async execution step in the new parallel thread.
 Prepare list of initialize steps:
 ```swift
@@ -99,7 +99,7 @@ let steps: [DependencyInitializationStep] = [
 ]
 ```
 ## DependencyInitializer
-Create initializer and start initialize process.
+Create initializer and start initialize process.\
 Example for UIKit:
 ```swift
 // SceneDelegate.swift
@@ -209,5 +209,5 @@ result.runRepeat(
 ```
 
 # Additional information
-For more details see example project.
+For more details see example project.\
 And feel free to open an issue if you find any bugs or errors or suggestions.
