@@ -21,6 +21,7 @@ let package = Package(
         .target(
             name: "DependencyInitializer"),
         .testTarget(
-            name: "DependencyInitializerTests"),
+            name: "DependencyInitializerTests",
+            dependencies: ["DependencyInitializer"]),
     ]
 )

@@ -191,21 +191,18 @@ DependencyInitializer<InitializationProcess, Dependency>(
 For example, in the runtime of a Flutter application, you need to reinitialize your new dependencies for the new environment and return the first widget of the Flutter application again.
 ```swift
 result.runRepeat(
-    steps: [
-        InitializationStep<InitializationProcess>(
-            title: "Environment",
-            run: { process in
-                process.environment = NewEnvironment()
-            }
-        ),
-    ] + result.repeatSteps,
-    onSuccess: { [weak self] _, _ in
+    nil,
+    nil,
+    nil,
+    nil,
+    nil,
+    { result, _ in
         // Success case
     },
-    onError: { [weak self] _, _, _, _ in
+    { _, _, _, _ in
         // Error case
     }
-);
+)
 ```
 
 # Additional information

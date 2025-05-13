@@ -1,10 +1,10 @@
-import XCTest
-import SwiftUI
 @testable import DependencyInitializer
+import SwiftUI
+import XCTest
 
 @MainActor
 final class DependencyInitializerTests: XCTestCase {
-     func mainTest() {
+    func stepTest() {
         let process = TestInitializationProcess()
         DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
@@ -16,9 +16,6 @@ final class DependencyInitializerTests: XCTestCase {
                 XCTAssertNotNil(process.service)
                 XCTAssertNotNil(process.database)
                 XCTAssertNotNil(process.repository)
-                XCTAssertNotNil(process.environment)
-                XCTAssertNotNil(process.environment)
-                XCTAssertNotNil(process.environment)
                 
                 let dependency: TestDependency = result.container
                 XCTAssertNotNil(dependency.environment)
@@ -27,59 +24,53 @@ final class DependencyInitializerTests: XCTestCase {
         ).run()
     }
     
-    func asyncTest() {
+    func asyncStepTest() {
         let process = TestInitializationProcess()
-       DependencyInitializer<TestInitializationProcess, TestDependency>(
-           createProcess: { process },
-           steps: [
-               DependencyInitializerTests.dataStep,
-           ] + getAsyncStep(),
-           onSuccess: { result, _ in
-               XCTAssertNotNil(process.environment)
-               XCTAssertNotNil(process.service)
-               XCTAssertNotNil(process.database)
-               XCTAssertNotNil(process.repository)
-               XCTAssertNotNil(process.environment)
-               XCTAssertNotNil(process.environment)
-               XCTAssertNotNil(process.environment)
+        DependencyInitializer<TestInitializationProcess, TestDependency>(
+            createProcess: { process },
+            steps: [
+                DependencyInitializerTests.dataStep,
+            ] + getAsyncStep(),
+            onSuccess: { result, _ in
+                XCTAssertNotNil(process.environment)
+                XCTAssertNotNil(process.service)
+                XCTAssertNotNil(process.database)
+                XCTAssertNotNil(process.repository)
                
-               let dependency: TestDependency = result.container
-               XCTAssertNotNil(dependency.environment)
-               XCTAssertNotNil(dependency.repository)
-               XCTAssertNotNil(dependency.initialCatFact0)
-               XCTAssertNotNil(dependency.initialCatFact1)
-               XCTAssertNotNil(dependency.initialCatFact2)
-           },
-       ).run()
-   }
+                let dependency: TestDependency = result.container
+                XCTAssertNotNil(dependency.environment)
+                XCTAssertNotNil(dependency.repository)
+                XCTAssertNotNil(dependency.initialCatFact0)
+                XCTAssertNotNil(dependency.initialCatFact1)
+                XCTAssertNotNil(dependency.initialCatFact2)
+            },
+        ).run()
+    }
     
     func reinitializationTest() {
-       var process = TestInitializationProcess()
-       DependencyInitializer<TestInitializationProcess, TestDependency>(
-           createProcess: { process },
-           steps: [
-               DependencyInitializerTests.dataStep,
-           ] + getAsyncStep(
-            type: .repeatable
-           ),
-           onSuccess: { result, _ in
-               XCTAssertNotNil(process.environment)
-               XCTAssertNotNil(process.service)
-               XCTAssertNotNil(process.database)
-               XCTAssertNotNil(process.repository)
-               XCTAssertNotNil(process.environment)
-               XCTAssertNotNil(process.environment)
-               XCTAssertNotNil(process.environment)
+        var process = TestInitializationProcess()
+        DependencyInitializer<TestInitializationProcess, TestDependency>(
+            createProcess: { process },
+            steps: [
+                DependencyInitializerTests.dataStep,
+            ] + getAsyncStep(
+                type: .repeatable
+            ),
+            onSuccess: { result, _ in
+                XCTAssertNotNil(process.environment)
+                XCTAssertNotNil(process.service)
+                XCTAssertNotNil(process.database)
+                XCTAssertNotNil(process.repository)
                
-               let dependency: TestDependency = result.container
-               XCTAssertNotNil(dependency.environment)
-               XCTAssertNotNil(dependency.repository)
-               XCTAssertNotNil(dependency.initialCatFact0)
-               XCTAssertNotNil(dependency.initialCatFact1)
-               XCTAssertNotNil(dependency.initialCatFact2)
+                let dependency: TestDependency = result.container
+                XCTAssertNotNil(dependency.environment)
+                XCTAssertNotNil(dependency.repository)
+                XCTAssertNotNil(dependency.initialCatFact0)
+                XCTAssertNotNil(dependency.initialCatFact1)
+                XCTAssertNotNil(dependency.initialCatFact2)
                
-               process = TestInitializationProcess()
-               result.runRepeat(
+                process = TestInitializationProcess()
+                result.runRepeat(
                     { process },
                     nil,
                     nil,
@@ -90,9 +81,6 @@ final class DependencyInitializerTests: XCTestCase {
                         XCTAssertNotNil(process.service)
                         XCTAssertNotNil(process.database)
                         XCTAssertNotNil(process.repository)
-                        XCTAssertNotNil(process.environment)
-                        XCTAssertNotNil(process.environment)
-                        XCTAssertNotNil(process.environment)
                         
                         let dependency: TestDependency = result.container
                         XCTAssertNotNil(dependency.environment)
@@ -102,15 +90,58 @@ final class DependencyInitializerTests: XCTestCase {
                         XCTAssertNotNil(dependency.initialCatFact2)
                     },
                     nil
-               )
-           },
-       ).run()
-   }
+                )
+            },
+        ).run()
+    }
+    
+    func errorStepTest() {
+        let process = TestInitializationProcess()
+        DependencyInitializer<TestInitializationProcess, TestDependency>(
+            createProcess: { process },
+            steps: [
+                InitializationStep<TestInitializationProcess>(
+                    run: { process in
+                        throw NSError(
+                            domain: "TestError",
+                            code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: "Test error"])
+                    }
+                )
+            ],
+            onError: { error, _, _, _ in
+                XCTAssertEqual((error as NSError).domain, "TestError")
+                XCTAssertEqual((error as NSError).code, 0)
+                XCTAssertEqual((error as NSError).localizedDescription, "Test error")
+            }
+        ).run()
+    }
+    
+    func errorAsyncStepTest() {
+        let process = TestInitializationProcess()
+        DependencyInitializer<TestInitializationProcess, TestDependency>(
+            createProcess: { process },
+            steps: [
+                AsyncInitializationStep<TestInitializationProcess>(
+                    run: { process in
+                        throw NSError(
+                            domain: "TestError",
+                            code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: "Test error"])
+                    }
+                )
+            ],
+            onError: { error, _, _, _ in
+                XCTAssertEqual((error as NSError).domain, "TestError")
+                XCTAssertEqual((error as NSError).code, 0)
+                XCTAssertEqual((error as NSError).localizedDescription, "Test error")
+            }
+        ).run()
+    }
 }
 
 private extension DependencyInitializerTests {
     static let dataStep = InitializationStep<TestInitializationProcess>(
-        title: "Data",
         run: { process in
             process.environment = TestBaseEnvironment()
             process.service = TestEntityService(
@@ -131,7 +162,6 @@ private extension DependencyInitializerTests {
     ) -> [AsyncInitializationStep<TestInitializationProcess>] {
         [
             AsyncInitializationStep<TestInitializationProcess>(
-                title: "Cat Fact 0",
                 type: type,
                 run: { process in
                     sleep(1)
@@ -144,7 +174,6 @@ private extension DependencyInitializerTests {
                 }
             ),
             AsyncInitializationStep<TestInitializationProcess>(
-                title: "Cat Fact 1",
                 type: type,
                 run: { process in
                     sleep(3)
@@ -157,7 +186,6 @@ private extension DependencyInitializerTests {
                 }
             ),
             AsyncInitializationStep<TestInitializationProcess>(
-                title: "Cat Fact 2",
                 type: type,
                 run: { process in
                     sleep(2)
@@ -168,8 +196,7 @@ private extension DependencyInitializerTests {
                         )
                     }
                 }
-            )
+            ),
         ]
     }
 }
-
