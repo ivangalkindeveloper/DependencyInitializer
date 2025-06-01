@@ -21,18 +21,18 @@ Identically as for a successful launch, a similar scenario works for a test appl
 ## CocoaPods
 For projects with [CocoaPods](https://cocoapods.org):
 ```ruby
-pod 'Toaster'
+pod 'DependencyInitializer'
 ```
 ## Carthage
 For projects with [Carthage](https://github.com/Carthage/Carthage):
 ```
-github "devxoul/Toaster"
+github "ivangalkindeveloper/DependencyInitializer"
 ```
 ## Swift Package Manager
 For projects with [Swift Package Manager](https://github.com/apple/swift-package-manager):
 ```
 dependencies: [
-    .package(url: "https://github.com/devxoul/Toaster.git", from: "master")
+    .package(url: "https://github.com/ivangalkindeveloper/DependencyInitializer.git", from: "master")
 ]
 ```
 
