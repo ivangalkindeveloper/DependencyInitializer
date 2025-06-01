@@ -1,4 +1,3 @@
-
 # Dependency initializer
 DependencyInitializer is a convenient and understandable contract for initializing dependencies.\
 The main goal is to provide a clear assembly of a dependency container with initialization steps.\
@@ -17,6 +16,25 @@ Important points for full use:
 1) Initialization steps imply not only filling the initialization process, but also the possibility of your custom checks related to business logic requests.
 2) Do not forget that in case of an initialization error, you can show the error screen, and by passing the result to this widget, you can restart the initialization process using runRepeat.
 Identically as for a successful launch, a similar scenario works for a test application, in particular for changing the environment without restarting the application.
+
+# Installation
+## CocoaPods
+For projects with [CocoaPods](https://cocoapods.org):
+```ruby
+pod 'Toaster'
+```
+## Carthage
+For projects with [Carthage](https://github.com/Carthage/Carthage):
+```
+github "devxoul/Toaster"
+```
+## Swift Package Manager
+For projects with [Swift Package Manager](https://github.com/apple/swift-package-manager):
+```
+dependencies: [
+    .package(url: "https://github.com/devxoul/Toaster.git", from: "master")
+]
+```
 
 # Usage
 ## Container
