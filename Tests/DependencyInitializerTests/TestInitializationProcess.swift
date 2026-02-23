@@ -1,10 +1,3 @@
-//
-//  TestInitializationProcess.swift
-//  DependencyInitializer
-//
-//  Created by Иван Галкин on 13.05.2025.
-//
-
 @testable import DependencyInitializer
 
 final class TestInitializationProcess: DependencyInitializationProcess {

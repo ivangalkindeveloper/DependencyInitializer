@@ -1,26 +1,25 @@
-//
-//  DependencyInitializationResult.swift
-//  DependencyInitializer
-//
-//  Created by Иван Галкин on 01.05.2025.
-//
-
 public final class DependencyInitializationResult<Process: DependencyInitializationProcess, T> {
     // MARK: - Public properties
     
     public let container: T
-    public let repeatSteps: [DIStep]
+    public let repeatPreSyncSteps: [SyncInitializationStep<Process>]
+    public let repeatAsyncSteps: [AsyncInitializationStep<Process>]
+    public let repeatPostSyncSteps: [SyncInitializationStep<Process>]
     public let runRepeat: DIRepeatCallback<Process, T>
     
     // MARK: - Initialization
     
     init(
         container: T,
-        reinitializationStepList: [DIStep],
+        repeatPreSyncSteps: [SyncInitializationStep<Process>],
+        repeatAsyncSteps: [AsyncInitializationStep<Process>],
+        repeatPostSyncSteps: [SyncInitializationStep<Process>],
         runRepeat: @escaping DIRepeatCallback<Process, T>
     ) {
         self.container = container
-        self.repeatSteps = reinitializationStepList
+        self.repeatPreSyncSteps = repeatPreSyncSteps
+        self.repeatAsyncSteps = repeatAsyncSteps
+        self.repeatPostSyncSteps = repeatPostSyncSteps
         self.runRepeat = runRepeat
     }
 }

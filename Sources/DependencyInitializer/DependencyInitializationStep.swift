@@ -1,16 +1,9 @@
-//
-//  DependencyInitializationStep.swift
-//  DependencyInitializer
-//
-//  Created by Иван Галкин on 01.05.2025.
-//
-
 public protocol DependencyInitializationStep: AnyObject {
     var title: String? { get }
     var type: DIStepType { get }
 }
 
-public final class InitializationStep<Process: DIProcess>: DIStep {
+public final class SyncInitializationStep<Process: DIProcess>: DIStep {
     // MARK: - Public properties
     
     public let title: String?

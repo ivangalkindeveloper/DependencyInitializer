@@ -1,10 +1,3 @@
-//
-//  TestDependency.swift
-//  DependencyInitializer
-//
-//  Created by Иван Галкин on 13.05.2025.
-//
-
 final class TestDependency: Sendable {
     init(
         environment: TestEnvironment,

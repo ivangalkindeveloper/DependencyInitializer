@@ -1,10 +1,3 @@
-//
-//  DependencyInitializerTestData.swift
-//  DependencyInitializer
-//
-//  Created by Иван Галкин on 13.05.2025.
-//
-
 protocol TestEnvironment: Sendable {}
 final class TestBaseEnvironment: TestEnvironment {}
 

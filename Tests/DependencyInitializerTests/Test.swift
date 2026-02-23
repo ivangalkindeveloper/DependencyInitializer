@@ -8,7 +8,7 @@ final class DependencyInitializerTests: XCTestCase {
         let process = TestInitializationProcess()
         DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            steps: [
+            preSyncSteps: [
                 DependencyInitializerTests.dataStep,
             ],
             onSuccess: { result, _ in
@@ -28,9 +28,10 @@ final class DependencyInitializerTests: XCTestCase {
         let process = TestInitializationProcess()
         DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            steps: [
+            preSyncSteps: [
                 DependencyInitializerTests.dataStep,
-            ] + getAsyncStep(),
+            ],
+            asyncSteps: getAsyncStep(),
             onSuccess: { result, _ in
                 XCTAssertNotNil(process.environment)
                 XCTAssertNotNil(process.service)
@@ -51,11 +52,10 @@ final class DependencyInitializerTests: XCTestCase {
         var process = TestInitializationProcess()
         DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            steps: [
+            preSyncSteps: [
                 DependencyInitializerTests.dataStep,
-            ] + getAsyncStep(
-                type: .repeatable
-            ),
+            ],
+            asyncSteps: getAsyncStep(type: .repeatable),
             onSuccess: { result, _ in
                 XCTAssertNotNil(process.environment)
                 XCTAssertNotNil(process.service)
@@ -72,6 +72,8 @@ final class DependencyInitializerTests: XCTestCase {
                 process = TestInitializationProcess()
                 result.runRepeat(
                     { process },
+                    nil,
+                    nil,
                     nil,
                     nil,
                     nil,
@@ -99,8 +101,8 @@ final class DependencyInitializerTests: XCTestCase {
         let process = TestInitializationProcess()
         DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            steps: [
-                InitializationStep<TestInitializationProcess>(
+            preSyncSteps: [
+                SyncInitializationStep<TestInitializationProcess>(
                     run: { process in
                         throw NSError(
                             domain: "TestError",
@@ -121,7 +123,7 @@ final class DependencyInitializerTests: XCTestCase {
         let process = TestInitializationProcess()
         DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            steps: [
+            asyncSteps: [
                 AsyncInitializationStep<TestInitializationProcess>(
                     run: { process in
                         throw NSError(
@@ -141,7 +143,7 @@ final class DependencyInitializerTests: XCTestCase {
 }
 
 private extension DependencyInitializerTests {
-    static let dataStep = InitializationStep<TestInitializationProcess>(
+    static let dataStep = SyncInitializationStep<TestInitializationProcess>(
         run: { process in
             process.environment = TestBaseEnvironment()
             process.service = TestEntityService(
