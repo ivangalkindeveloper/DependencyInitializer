@@ -81,16 +81,23 @@ final class InitializationProcess: DependencyInitializationProcess {
 }
 ```
 ## Steps
+The initializer runs steps in three phases in order: **preSyncSteps** (sync) → **asyncSteps** (async) → **postSyncSteps** (sync). At least one of the three lists must be non-empty.
+
+- **preSyncSteps** — synchronous steps that run first on the main thread.
+- **asyncSteps** — asynchronous steps that run in parallel (separate tasks).
+- **postSyncSteps** — synchronous steps that run after async steps complete.
+
 [DependencyInitializationStepType](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStepType.swift) - step execution type:\
-simple - the step is executed once, this is useful for example for initializing Firebase, database and other integration packages.\
-repeatable - the step is executed and remembered for further repeated execution when calling re-initialization using the runRepeat function.\
-[InitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - async execution step in the current main thread.\
-[AsyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - async execution step in the new parallel thread.
-Prepare list of initialize steps:
+simple - the step is executed once (e.g. for initializing Firebase, database and other integration packages).\
+repeatable - the step is executed and remembered for re-initialization when calling runRepeat.
+
+[SyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - synchronous step (for preSyncSteps and postSyncSteps).\
+[AsyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - asynchronous step (for asyncSteps).
+
+Prepare lists of steps:
 ```swift
-let steps: [DependencyInitializationStep] = [
-    InitializationStep<InitializationProcess>(
-        title: "Data",
+let preSyncSteps: [SyncInitializationStep<InitializationProcess>] = [
+    SyncInitializationStep<InitializationProcess>(
         run: { process in
             process.environment = BaseEnvironment()
             process.service = EntityService(
@@ -105,8 +112,10 @@ let steps: [DependencyInitializationStep] = [
             )
         }
     ),
+]
+
+let asyncSteps: [AsyncInitializationStep<InitializationProcess>] = [
     AsyncInitializationStep<InitializationProcess>(
-        title: "Cat Fact",
         run: { process in
             let catFact = try await process.repository!.getCatFact()
             await MainActor.run {
@@ -115,9 +124,13 @@ let steps: [DependencyInitializationStep] = [
         }
     ),
 ]
+
+let postSyncSteps: [SyncInitializationStep<InitializationProcess>] = [
+    // optional sync steps after async
+]
 ```
 ## DependencyInitializer
-Create initializer and start initialize process.\
+Create initializer and start initialize process. Pass **preSyncSteps**, **asyncSteps**, and **postSyncSteps** (each optional; at least one must be non-empty).\
 Example for UIKit:
 ```swift
 // SceneDelegate.swift
@@ -127,7 +140,9 @@ func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options conn
 
     DependencyInitializer<InitializationProcess, Dependency>(
         createProcess: { InitializationProcess() },
-        steps: steps,
+        preSyncSteps: preSyncSteps,
+        asyncSteps: asyncSteps,
+        postSyncSteps: postSyncSteps,
         onSuccess: { result, _ in
             self.setViewController(
                 MainViewController(
@@ -168,7 +183,9 @@ class AppState: ObservableObject {
     func initialize() {
         DependencyInitializer<InitializationProcess, Dependency>(
             createProcess: { InitializationProcess() },
-            steps: AppState.initializationSteps,
+            preSyncSteps: AppState.preSyncSteps,
+            asyncSteps: AppState.asyncSteps,
+            postSyncSteps: AppState.postSyncSteps,
             onSuccess: { [weak self] result, _ in
                 self?.root = NavigationStack {
                     MainView(
@@ -195,7 +212,9 @@ For example, if you want the Flutter application to show a native splash screen 
 ```swift
 DependencyInitializer<InitializationProcess, Dependency>(
     createProcess: { InitializationProcess() },
-    steps: AppState.initializationSteps,
+    preSyncSteps: preSyncSteps,
+    asyncSteps: asyncSteps,
+    postSyncSteps: postSyncSteps,
     onSuccess: { [weak self] _, _ in
         // Success case
     },
@@ -209,6 +228,8 @@ DependencyInitializer<InitializationProcess, Dependency>(
 For example, in the runtime of a Flutter application, you need to reinitialize your new dependencies for the new environment and return the first widget of the Flutter application again.
 ```swift
 result.runRepeat(
+    nil,
+    nil,
     nil,
     nil,
     nil,

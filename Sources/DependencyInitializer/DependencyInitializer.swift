@@ -45,7 +45,7 @@ public final class DependencyInitializer<Process: DIProcess, T: Sendable>: TimeD
 // MARK: - Public methods
 
 public extension DependencyInitializer {
-    func run() {
+    func run() async {
         assert(
             !self.preSyncSteps.isEmpty || !self.asyncSteps.isEmpty || !self.postSyncSteps.isEmpty,
             "Step lists can't be empty"
@@ -59,7 +59,7 @@ public extension DependencyInitializer {
             steps: self.preSyncSteps,
         )
         
-        self.runAsyncSteps(
+        await self.runAsyncSteps(
             context: context,
         )
         
@@ -145,7 +145,7 @@ private extension DependencyInitializer {
     
     func runAsyncSteps(
         context: Context<Process>,
-    ) {
+    ) async {
         guard !self.asyncSteps.isEmpty, context.error == nil else {
             return
         }
@@ -155,29 +155,27 @@ private extension DependencyInitializer {
             onError: self.onError,
             diffTime: { self.diffTime($0) }
         )
-        Task {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                for step in self.asyncSteps {
-                    guard context.error == nil else {
-                        return group.cancelAll()
-                    }
-                        
-                    group.addTask(
-                        priority: step.taskPriority
-                    ) {
-                        await Self.runAsyncStep(
-                            context: context,
-                            step: step,
-                            relay: relay
-                        )
-                    }
+        try! await withThrowingTaskGroup(of: Void.self) { group in
+            for step in self.asyncSteps {
+                guard context.error == nil else {
+                    return group.cancelAll()
                 }
                     
-                try await group.waitForAll()
-                self.executeSuccess(
-                    context: context
-                )
+                group.addTask(
+                    priority: step.taskPriority
+                ) {
+                    await Self.runAsyncStep(
+                        context: context,
+                        step: step,
+                        relay: relay
+                    )
+                }
             }
+                
+            try await group.waitForAll()
+            self.executeSuccess(
+                context: context
+            )
         }
     }
     
@@ -242,7 +240,7 @@ private extension DependencyInitializer {
             onSuccess,
             onError in
             
-            DependencyInitializer(
+            await DependencyInitializer(
                 createProcess: createProcess ?? self.createProcess,
                 preSyncSteps: preSyncSteps ?? self.preSyncSteps,
                 asyncSteps: asyncSteps ?? self.asyncSteps,
