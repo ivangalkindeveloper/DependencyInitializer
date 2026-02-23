@@ -35,9 +35,7 @@ final class Context<Process: DIProcess>: Sendable {
     func catchError(
         _ error: Error
     ) -> Void {
-        guard self.error == nil else {
-            return
-        }
+        guard self.error == nil else { return }
         
         self.error = error
     }

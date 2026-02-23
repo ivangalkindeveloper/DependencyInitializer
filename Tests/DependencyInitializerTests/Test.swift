@@ -10,15 +10,18 @@ struct DependencyInitializerTests {
         let process = TestInitializationProcess()
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.syncSteps,
+            preSyncSteps: Self.preSyncSteps,
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
                 #expect(process.database != nil)
                 #expect(process.repository != nil)
+                #expect(process.initialCatFact0 != nil)
+                #expect(process.initialCatFact1 == nil)
+                #expect(process.initialCatFact2 == nil)
                 
                 let dependency: TestDependency = result.container
-                #expect(dependency.initialCatFact0 == nil)
+                #expect(dependency.initialCatFact0 != nil)
                 #expect(dependency.initialCatFact1 == nil)
                 #expect(dependency.initialCatFact2 == nil)
             },
@@ -29,8 +32,32 @@ struct DependencyInitializerTests {
         let process = TestInitializationProcess()
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.syncSteps,
+            preSyncSteps: Self.preSyncSteps,
             asyncSteps: asyncSteps(.simple),
+            onSuccess: { result, _ in
+                #expect(process.environment != nil)
+                #expect(process.service != nil)
+                #expect(process.database != nil)
+                #expect(process.repository != nil)
+                #expect(process.initialCatFact0 != nil)
+                #expect(process.initialCatFact1 != nil)
+                #expect(process.initialCatFact2 == nil)
+                
+                let dependency: TestDependency = result.container
+                #expect(dependency.initialCatFact0 != nil)
+                #expect(dependency.initialCatFact1 != nil)
+                #expect(dependency.initialCatFact2 == nil)
+            },
+        ).run()
+    }
+    
+    @Test func postSyncSteps() async {
+        let process = TestInitializationProcess()
+        await DependencyInitializer<TestInitializationProcess, TestDependency>(
+            createProcess: { process },
+            preSyncSteps: Self.preSyncSteps,
+            asyncSteps: asyncSteps(.simple),
+            postSyncSteps: Self.postSyncSteps,
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
@@ -53,8 +80,9 @@ struct DependencyInitializerTests {
         var initResult: DependencyInitializationResult<TestInitializationProcess, TestDependency>?
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.syncSteps,
+            preSyncSteps: Self.preSyncSteps,
             asyncSteps: asyncSteps(.repeatable),
+            postSyncSteps: Self.postSyncSteps,
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
@@ -139,7 +167,7 @@ struct DependencyInitializerTests {
 }
 
 private extension DependencyInitializerTests {
-    static let syncSteps: [SyncInitializationStep<TestInitializationProcess>] = [
+    static let preSyncSteps: [SyncInitializationStep<TestInitializationProcess>] = [
         SyncInitializationStep<TestInitializationProcess>(
             run: { process in
                 process.environment = TestBaseEnvironment()
@@ -166,6 +194,13 @@ private extension DependencyInitializerTests {
                     database: process.database!
                 )
             }
+        ),
+        SyncInitializationStep<TestInitializationProcess>(
+            run: { process in
+                process.initialCatFact0 = TestCatFact(
+                    fact: "Cat fact 0"
+                )
+            }
         )
     ]
 
@@ -176,37 +211,22 @@ private extension DependencyInitializerTests {
                 run: { process in
                     sleep(1)
                     await MainActor.run {
-                        process.initialCatFact0 = TestCatFact(
-                            fact: "Cat fact 0",
-                            length: 0
-                        )
-                    }
-                }
-            ),
-            AsyncInitializationStep<TestInitializationProcess>(
-                type: type,
-                run: { process in
-                    sleep(3)
-                    await MainActor.run {
                         process.initialCatFact1 = TestCatFact(
-                            fact: "Cat fact 1",
-                            length: 0
-                        )
-                    }
-                }
-            ),
-            AsyncInitializationStep<TestInitializationProcess>(
-                type: type,
-                run: { process in
-                    sleep(2)
-                    await MainActor.run {
-                        process.initialCatFact2 = TestCatFact(
-                            fact: "Cat fact 2",
-                            length: 0
+                            fact: "Cat fact 1"
                         )
                     }
                 }
             ),
         ]
     }
+    
+    static let postSyncSteps: [SyncInitializationStep<TestInitializationProcess>] = [
+        SyncInitializationStep<TestInitializationProcess>(
+            run: { process in
+                process.initialCatFact2 = TestCatFact(
+                    fact: "Cat fact 2"
+                )
+            }
+        )
+    ]
 }

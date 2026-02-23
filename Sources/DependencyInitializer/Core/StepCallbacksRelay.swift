@@ -35,9 +35,8 @@ final class StepCallbacksRelay<Process: DIProcess>: @unchecked Sendable {
         error: Error,
         step: DIStep
     ) {
-        guard context.error == nil else {
-            return
-        }
+        guard context.error == nil else { return }
+        
         context.catchError(error)
         self.onError?(error, context.process, step, self.diffTime(context.startTime))
     }

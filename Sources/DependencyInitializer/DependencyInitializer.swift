@@ -67,6 +67,10 @@ public extension DependencyInitializer {
             context: context,
             steps: self.postSyncSteps,
         )
+        
+        self.executeSuccess(
+            context: context
+        )
     }
 }
 
@@ -173,9 +177,6 @@ private extension DependencyInitializer {
             }
                 
             try await group.waitForAll()
-            self.executeSuccess(
-                context: context
-            )
         }
     }
     
