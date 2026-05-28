@@ -10,7 +10,9 @@ struct DependencyInitializerTests {
         let process = TestInitializationProcess()
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.preSyncSteps,
+            stepSets: [
+                StepSet(sync: Self.preSyncSteps)
+            ],
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
@@ -32,8 +34,10 @@ struct DependencyInitializerTests {
         let process = TestInitializationProcess()
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.preSyncSteps,
-            asyncSteps: asyncSteps(.simple),
+            stepSets: [
+                StepSet(sync: Self.preSyncSteps),
+                StepSet(async: asyncSteps(.simple))
+            ],
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
@@ -55,9 +59,11 @@ struct DependencyInitializerTests {
         let process = TestInitializationProcess()
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.preSyncSteps,
-            asyncSteps: asyncSteps(.simple),
-            postSyncSteps: Self.postSyncSteps,
+            stepSets: [
+                StepSet(sync: Self.preSyncSteps),
+                StepSet(async: asyncSteps(.simple)),
+                StepSet(sync: Self.postSyncSteps)
+            ],
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
@@ -75,14 +81,51 @@ struct DependencyInitializerTests {
         ).run()
     }
 
+    @Test func sequentialAsyncStepSets() async {
+        let process = TestInitializationProcess()
+        await DependencyInitializer<TestInitializationProcess, TestDependency>(
+            createProcess: { process },
+            stepSets: [
+                StepSet(sync: Self.preSyncSteps),
+                StepSet(async: [
+                    AsyncInitializationStep<TestInitializationProcess>(
+                        run: { process in
+                            await MainActor.run {
+                                process.initialCatFact1 = TestCatFact(fact: "Cat fact 1")
+                            }
+                        }
+                    )
+                ]),
+                StepSet(async: [
+                    AsyncInitializationStep<TestInitializationProcess>(
+                        run: { process in
+                            let previous = await MainActor.run { process.initialCatFact1 }
+                            #expect(previous != nil)
+                            await MainActor.run {
+                                process.initialCatFact2 = TestCatFact(fact: "Cat fact 2")
+                            }
+                        }
+                    )
+                ])
+            ],
+            onSuccess: { result, _ in
+                let dependency: TestDependency = result.container
+                #expect(dependency.initialCatFact1 != nil)
+                #expect(dependency.initialCatFact2 != nil)
+            },
+        ).run()
+    }
+
     @Test func reinitialization() async {
         let process = TestInitializationProcess()
         var initResult: DependencyInitializationResult<TestInitializationProcess, TestDependency>?
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { process },
-            preSyncSteps: Self.preSyncSteps,
-            asyncSteps: asyncSteps(.repeatable),
-            postSyncSteps: Self.postSyncSteps,
+            stepSets: [
+                StepSet(sync: Self.preSyncSteps),
+                StepSet(async: asyncSteps(.repeatable)),
+                StepSet(sync: Self.postSyncSteps)
+            ],
             onSuccess: { result, _ in
                 #expect(process.environment != nil)
                 #expect(process.service != nil)
@@ -101,8 +144,6 @@ struct DependencyInitializerTests {
         let repeatProcess = TestInitializationProcess()
         await result.runRepeat(
             { repeatProcess },
-            nil,
-            nil,
             nil,
             nil,
             nil,
@@ -126,15 +167,17 @@ struct DependencyInitializerTests {
     @Test func errorPreSyncStep() async {
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { TestInitializationProcess() },
-            preSyncSteps: [
-                SyncInitializationStep<TestInitializationProcess>(
-                    run: { _ in
-                        throw NSError(
-                            domain: "TestError",
-                            code: 0,
-                            userInfo: [NSLocalizedDescriptionKey: "Test error"])
-                    }
-                )
+            stepSets: [
+                StepSet(sync: [
+                    SyncInitializationStep<TestInitializationProcess>(
+                        run: { _ in
+                            throw NSError(
+                                domain: "TestError",
+                                code: 0,
+                                userInfo: [NSLocalizedDescriptionKey: "Test error"])
+                        }
+                    )
+                ])
             ],
             onError: { error, _, _, _ in
                 #expect((error as NSError).domain == "TestError")
@@ -147,15 +190,17 @@ struct DependencyInitializerTests {
     @Test func errorAsyncStep() async {
         await DependencyInitializer<TestInitializationProcess, TestDependency>(
             createProcess: { TestInitializationProcess() },
-            asyncSteps: [
-                AsyncInitializationStep<TestInitializationProcess>(
-                    run: { _ in
-                        throw NSError(
-                            domain: "TestError",
-                            code: 0,
-                            userInfo: [NSLocalizedDescriptionKey: "Test error"])
-                    }
-                )
+            stepSets: [
+                StepSet(async: [
+                    AsyncInitializationStep<TestInitializationProcess>(
+                        run: { _ in
+                            throw NSError(
+                                domain: "TestError",
+                                code: 0,
+                                userInfo: [NSLocalizedDescriptionKey: "Test error"])
+                        }
+                    )
+                ])
             ],
             onError: { error, _, _, _ in
                 #expect((error as NSError).domain == "TestError")

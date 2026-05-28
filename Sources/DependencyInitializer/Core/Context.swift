@@ -6,28 +6,18 @@ final class Context<Process: DIProcess>: Sendable {
     
     let process: Process
     let startTime: DispatchTime
-    //
-    let repeatPreSyncSteps: [SyncInitializationStep<Process>]
-    let repeatAsyncSteps: [AsyncInitializationStep<Process>]
-    let repeatPostSyncSteps: [SyncInitializationStep<Process>]
-    //
+    let repeatStepSets: [StepSet<Process>]
     var error: Error?
     
     // MARK: - Initialization
     
     init(
         process: Process,
-        //
-        repeatPreSyncSteps: [SyncInitializationStep<Process>],
-        repeatAsyncSteps: [AsyncInitializationStep<Process>],
-        repeatPostSyncSteps: [SyncInitializationStep<Process>],
+        repeatStepSets: [StepSet<Process>],
     ) {
         self.process = process
         self.startTime = .now()
-        //
-        self.repeatPreSyncSteps = repeatPreSyncSteps
-        self.repeatAsyncSteps = repeatAsyncSteps
-        self.repeatPostSyncSteps = repeatPostSyncSteps
+        self.repeatStepSets = repeatStepSets
     }
     
     // MARK: - Public methods
