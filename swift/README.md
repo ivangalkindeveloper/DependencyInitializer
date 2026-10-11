@@ -1,252 +1,136 @@
-# Dependency initializer
+# DependencyInitializer for Swift
 
-This is the Swift implementation. See the [project overview and Kotlin version](../README.md). The repository root and this directory both support Swift Package Manager.
+Build a dependency container from ordered sets of synchronous or asynchronous initialization steps. Observe progress, handle errors, record timing, and repeat initialization with a new configuration.
 
-The original UIKit and SwiftUI apps in `Example/` still use the removed `InitializationStep` API and currently do not build. They need migration to `StepSet`, `SyncInitializationStep` and `AsyncInitializationStep`; the library and its tests build independently.
-DependencyInitializer is a convenient and understandable contract for initializing dependencies.\
-The main goal is to provide a clear assembly of a dependency container with initialization steps.\
-Advantages:
-1) Convenient configuration - creating your own initialization steps and filling the initialization process;
-2) Parallel computation of isolated steps in separate isolates;
-3) Error handling;
-4) Re-initialization for steps that were created as repeated, for example, for changing the environment.
+[Platform comparison](../README.md).
 
-# Use cases
-Swift - run the initializer, get a dependency container and use it during the lifetime of the program.
-UIKit - run the initializer, get a dependency container, place it in the actor for futher use.
-SwiftUI - run the initializer, get a dependency container, place as EnvironmentObject for futher use.
+## Installation
 
-Important points for full use:
-1) Initialization steps imply not only filling the initialization process, but also the possibility of your custom checks related to business logic requests.
-2) Do not forget that in case of an initialization error, you can show the error screen, and by passing the result to this widget, you can restart the initialization process using runRepeat.
-Identically as for a successful launch, a similar scenario works for a test application, in particular for changing the environment without restarting the application.
+Requires Swift 6.0+, iOS 13+ or macOS 10.15+. Add the package with Swift Package Manager:
 
-# Installation
-## CocoaPods
-For projects with [CocoaPods](https://cocoapods.org):
-```ruby
-pod 'DependencyInitializer'
-```
-## Carthage
-For projects with [Carthage](https://github.com/Carthage/Carthage):
-```
-github "ivangalkindeveloper/DependencyInitializer"
-```
-## Swift Package Manager
-For projects with [Swift Package Manager](https://github.com/apple/swift-package-manager):
-```
-dependencies: [
-    .package(url: "https://github.com/ivangalkindeveloper/DependencyInitializer.git", branch: "master")
-]
-```
-
-# Usage
-## Container
-Create a container that will be the final result of all initialization:
 ```swift
-final class Dependency {
-    init(
-        environment: Environment,
-        repository: Repository,
-        initialCatFact: CatFact
-    ) {
-        self.environment = environment
-        self.repository = repository
-        self.initialCatFact = initialCatFact
-    }
-    
-    let environment: Environment
-    let repository: Repository
-    let initialCatFact: CatFact
+.package(
+    url: "https://github.com/ivangalkindeveloper/DependencyInitializer.git",
+    branch: "master"
+)
+```
+
+Add the `DependencyInitializer` product to your target. Both the repository root and this `swift/` directory can be opened as a Swift package.
+
+## Container and process
+
+```swift
+import DependencyInitializer
+
+struct AppDependencies: Sendable {
+    let environment: String
+    let initialValue: String
 }
-```
-The container can contain not only dependency entities, but also the original domain models for business logic.
-## Process
-Create a process that will gradually fill up.
-```swift
-final class InitializationProcess: DependencyInitializationProcess {
-    typealias T = Dependency
-    
-    var environment: Environment?
-    var service: HttpService?
-    var database: Database?
-    var repository: Repository?
-    var initialCatFact: CatFact?
-    
-    var toContainer: Dependency {
-        get {
-            Dependency(
-                environment: self.environment!,
-                repository: self.repository!,
-                initialCatFact: self.initialCatFact!
-            )
-        }
+
+@MainActor
+final class InitializationProcess: DIProcess {
+    typealias T = AppDependencies
+
+    var environment = "Production"
+    var initialValue: String?
+
+    var toContainer: AppDependencies {
+        AppDependencies(
+            environment: environment,
+            initialValue: initialValue!
+        )
     }
 }
 ```
-## Steps
-The initializer runs an ordered list of **stepSets**. Each `StepSet` contains either only synchronous steps or only asynchronous steps. Step sets are executed strictly sequentially: the initializer fully completes one set before starting the next. The `stepSets` list must be non-empty.
 
-- A sync `StepSet` runs its steps one by one on the main thread.
-- An async `StepSet` runs all its steps in parallel (separate tasks) and waits for all of them to finish before moving on to the next set.
+The process conforms to `DependencyInitializationProcess`, which requires `AnyObject`, `Sendable`, and a main-actor-isolated container conversion. Its container type must be `Sendable`.
 
-This lets you compose any pipeline, e.g. sync → async → sync → async, where each async set only starts after the previous set has fully completed.
+## Steps and execution
 
-[DependencyInitializationStepType](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStepType.swift) - step execution type:\
-simple - the step is executed once (e.g. for initializing Firebase, database and other integration packages).\
-repeatable - the step is executed and remembered for re-initialization when calling runRepeat.
-
-[SyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStep.swift) - synchronous step (for a sync `StepSet`).\
-[AsyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStep.swift) - asynchronous step (for an async `StepSet`).\
-[StepSet](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStepSet.swift) - a set of only synchronous (`StepSet(sync:)`) or only asynchronous (`StepSet(async:)`) steps.
-
-Prepare the step sets:
 ```swift
-let stepSets: [StepSet<InitializationProcess>] = [
-    StepSet(sync: [
-        SyncInitializationStep<InitializationProcess>(
-            run: { process in
-                process.environment = BaseEnvironment()
-                process.service = EntityService(
-                    environment: process.environment!
-                )
-                process.database = EntityDatabase(
-                    environment: process.environment!
-                )
-                process.repository = EntityRepository(
-                    service: process.service!,
-                    database: process.database!
-                )
-            }
-        ),
-    ]),
-    StepSet(async: [
-        AsyncInitializationStep<InitializationProcess>(
-            run: { process in
-                let catFact = try await process.repository!.getCatFact()
-                await MainActor.run {
-                    process.initialCatFact = catFact
+@MainActor
+func initialize() async {
+    let stepSets: [StepSet<InitializationProcess>] = [
+        StepSet(sync: [
+            SyncInitializationStep<InitializationProcess>(
+                title: "Platform",
+                run: { process in
+                    process.environment = "Production"
                 }
-            }
-        ),
-    ]),
-    // Another async set that starts only after the previous one fully completes
-    StepSet(async: [
-        AsyncInitializationStep<InitializationProcess>(
-            run: { process in
-                // uses data filled by the previous set
-            }
-        ),
-    ]),
-]
-```
-## DependencyInitializer
-Create initializer and start initialize process. Pass the ordered **stepSets** list (must be non-empty).\
-Example for UIKit:
-```swift
-// SceneDelegate.swift
-func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-    guard let scene = (scene as? UIWindowScene) else { return }
-    self.window = UIWindow(windowScene: scene)
+            ),
+        ]),
+        StepSet(async: [
+            AsyncInitializationStep<InitializationProcess>(
+                title: "Initial data",
+                type: .repeatable,
+                run: { process in
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    await MainActor.run {
+                        process.initialValue = "Loaded"
+                    }
+                }
+            ),
+        ]),
+    ]
 
-    DependencyInitializer<InitializationProcess, Dependency>(
+    await DependencyInitializer<InitializationProcess, AppDependencies>(
         createProcess: { InitializationProcess() },
         stepSets: stepSets,
-        onSuccess: { result, _ in
-            self.setViewController(
-                MainViewController(
-                    initialCatFact: result.container.initialCatFact
-                )
-            )
+        onStart: { /* Show loading. */ },
+        onStartStep: { step in /* Update progress. */ },
+        onSuccessStep: { step, stepNanos, totalNanos in /* Record timing. */ },
+        onSuccess: { result, totalNanos in
+            print(result.container.initialValue)
         },
-        onError: { error, _, _, _ in
-            self.setViewController(
-                ErrorViewController(
-                    error: error
-                )
-            )
+        onError: { error, process, step, totalNanos in
+            print(error)
         }
     ).run()
 }
 ```
-Example for SwiftUI:
+
+The step-set list must be non-empty. Each set contains either sync or async steps. Sync steps execute sequentially on the main actor. Async steps in a set execute concurrently in a task group; the next set starts only after the current one finishes.
+
+Use a later set for work that depends on results from earlier async steps. Access shared process state through actor isolation. Avoid blocking the main actor in sync steps. Async steps accept an optional `taskPriority`.
+
+All callbacks are delivered on the main actor. Times are `Double` nanoseconds measured with monotonic clocks; divide by `1_000_000` for milliseconds.
+
+## Errors
+
+A sync failure stops the remaining work. An async failure is reported once, already launched peers finish, and later sets are skipped. Successful peers can still invoke their success callbacks. A failed run does not produce a container or invoke `onSuccess`.
+
+The error callback receives the original error, partially populated process, failed step, and total duration. Errors thrown by cancellation are handled as step errors. Retry by running the initializer again with a fresh process.
+
+## Reinitialization
+
+A successful `DIResult` contains `container`, `repeatStepSets`, and an async `runRepeat` closure. Calling that closure with all overrides set to `nil` uses the original configuration, including all original step sets.
+
 ```swift
-@main
-struct SwiftUIExampleApp: App {
-    @StateObject private var state = AppState()
-
-    var body: some Scene {
-        WindowGroup {
-            AnyView(self.state.root)
-                .onAppear {
-                    self.state.initialize()
-                }
-        }
-    }
-}
-
-@MainActor
-class AppState: ObservableObject {
-    @Published var root: any View = EmptyView()
-
-    func initialize() {
-        DependencyInitializer<InitializationProcess, Dependency>(
-            createProcess: { InitializationProcess() },
-            stepSets: AppState.stepSets,
-            onSuccess: { [weak self] result, _ in
-                self?.root = NavigationStack {
-                    MainView(
-                        initialCatFact: result.container.initialCatFact
-                    )
-                }
-            },
-            onError: { [weak self] error, _, _, _ in
-                self?.root = NavigationStack {
-                    ErrorView(
-                        error: error
-                    )
-                }
-            }
-        ).run()
-    }
-}
+await result.runRepeat(nil, nil, nil, nil, nil, nil, nil)
 ```
 
-# Usage examples
-Initializer has several use cases:
-1) Direct.\
-For example, if you want the Flutter application to show a native splash screen when it starts, and then launch the first widget.
-```swift
-DependencyInitializer<InitializationProcess, Dependency>(
-    createProcess: { InitializationProcess() },
-    stepSets: stepSets,
-    onSuccess: { [weak self] _, _ in
-        // Success case
-    },
-    onError: { [weak self] _, _, _, _ in
-        // Error case
-    }
-).run()
-```
+Arguments are positional, in this order: `createProcess`, `stepSets`, `onStart`, `onStartStep`, `onSuccessStep`, `onSuccess`, `onError`.
 
-2) Reinitialization from result.\
-For example, in the runtime of a Flutter application, you need to reinitialize your new dependencies for the new environment and return the first widget of the Flutter application again.
+To execute only repeatable steps, pass the filtered sets and a process factory seeded with any dependencies those steps require:
+
 ```swift
-result.runRepeat(
-    nil,
-    nil,
-    nil,
-    nil,
-    nil,
-    { result, _ in
-        // Success case
-    },
-    { _, _, _, _ in
-        // Error case
-    }
+await result.runRepeat(
+    { makeSeededProcess() },
+    result.repeatStepSets,
+    nil, nil, nil, nil, nil
 )
 ```
 
-# Additional information
-For more details see example project.\
-And feel free to open an issue if you find any bugs or errors or suggestions.
+`makeSeededProcess()` is your application-defined factory. Do not pass an empty filtered list. A `nil` override inherits the earlier value; an empty callback can disable inherited behavior.
+
+## Checks and examples
+
+From this directory:
+
+```sh
+swift test
+```
+
+Tests cover ordered and parallel work, errors, callbacks, and reinitialization.
+
+The original UIKit and SwiftUI apps in `Example/` have valid local package references but still use the removed `InitializationStep` API. They currently require migration to `StepSet`, `SyncInitializationStep`, and `AsyncInitializationStep` before they can build. The library and its tests build independently.

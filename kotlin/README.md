@@ -1,29 +1,26 @@
-# DependencyInitializer для Kotlin / Android
+# DependencyInitializer for Kotlin / Android
 
-Эта реализация находится в общем репозитории DependencyInitializer. [Обзор проекта и Swift-версия](../README.md). Все команды ниже выполняются из каталога `kotlin/`; открывайте его в Android Studio.
+Assemble a dependency container through ordered step sets, with parallel asynchronous steps, progress callbacks, error handling, timing, and repeated initialization.
 
-Порт Swift-пакета `DependencyInitializer`: сборка контейнера зависимостей через процесс инициализации, последовательные наборы шагов, параллельные асинхронные шаги, callbacks, обработка ошибок, измерение времени и повторный запуск.
+[Platform comparison](../README.md). Open this `kotlin/` directory in Android Studio and run commands from here.
 
-Модули:
+## Installation
 
-- `dependency-initializer` — библиотека JVM JAR с Kotlin Coroutines, пригодная для Android Views, Compose и обычного JVM-проекта.
-- `sample` — запускаемое Android-приложение: прогресс инициализации, параллельная загрузка данных, ошибка и retry, полная переинициализация и смена окружения с сохранением базы данных.
+`dependency-initializer` is a JVM JAR using Kotlin Coroutines. It can be used with Android Views, Compose, or a JVM application. `sample` is a Compose app demonstrating progress, parallel loading, failure and retry, full reinitialization, and environment switching while retaining a database.
 
-## Сборка и подключение
-
-JDK 17 и Gradle Wrapper 8.13. Библиотека использует Kotlin 2.2.21, Coroutines 1.10.2 и байткод Java 8. Для Android-примера нужны Android SDK 36 и Build Tools 35.0.0; его минимальная версия Android — API 23.
+Build with JDK 17 and Gradle Wrapper 8.13. The library uses Kotlin 2.2.21, Coroutines 1.10.2, and Java 8 bytecode. The example requires Android SDK 36, Build Tools 35.0.0, and Android API 23+.
 
 ```sh
 ./gradlew test assembleDebug lintDebug publishToMavenLocal
 ```
 
-SDK укажите через `ANDROID_HOME` или исключённый из Git `local.properties`:
+Set the Android SDK through `ANDROID_HOME` or an ignored `local.properties` file:
 
 ```properties
 sdk.dir=/absolute/path/to/Android/sdk
 ```
 
-В `settings.gradle.kts` приложения добавьте `mavenLocal()` в `dependencyResolutionManagement.repositories`, сохранив `google()` и `mavenCentral()`. Затем:
+Add `mavenLocal()` to the application's repositories, alongside `google()` and `mavenCentral()`:
 
 ```kotlin
 dependencies {
@@ -31,9 +28,9 @@ dependencies {
 }
 ```
 
-Альтернативное подключение исходников: `includeBuild("/absolute/path/to/DependencyInitializer/kotlin")` в settings; строка зависимости остаётся той же. Библиотека не зависит от Handler, Router или Compose. `kotlinx-coroutines-android` подключается транзитивно для главного dispatcher; в обычном JVM-проекте передайте свой `mainDispatcher`.
+Alternatively, use `includeBuild("/absolute/path/to/DependencyInitializer/kotlin")` with the same dependency coordinate. The library does not depend on Handler, Router, or Compose. `kotlinx-coroutines-android` supplies the Android main dispatcher; inject your own `mainDispatcher` outside Android. Remote Maven publishing requires separate repository and credential configuration.
 
-## Контейнер, процесс и шаги
+## Container, process, and steps
 
 ```kotlin
 import io.ivangalkindeveloper.dependencyinitializer.*
@@ -57,7 +54,7 @@ val stepSets: List<StepSet<InitializationProcess>> = listOf(
     )),
     StepSet(async = listOf(
         AsyncInitializationStep(title = "Initial data", type = DIStepType.REPEATABLE) { process ->
-            delay(100) // Здесь можно вызвать suspend-метод repository.
+            delay(100) // Replace this with a suspend repository call.
             val value = "Data from ${process.environment}"
             withContext(Dispatchers.Main.immediate) { process.initialValue = value }
         },
@@ -70,84 +67,69 @@ val stepSets: List<StepSet<InitializationProcess>> = listOf(
 )
 ```
 
-`stepSets` должен быть непустым. Отдельные пустые наборы допустимы и пропускаются. `StepSet` принимает либо `sync`, либо `async`; одновременная передача обоих или отсутствие обоих — ошибка конфигурации.
+The `stepSets` list must be non-empty. Empty individual sets are allowed and skipped. Each `StepSet` accepts exactly one of `sync` or `async`.
 
-Наборы выполняются строго по порядку. Синхронные шаги внутри набора выполняются по одному на `mainDispatcher`. Асинхронные шаги одного набора запускаются параллельно на `asyncDispatcher` и полностью завершаются перед следующим набором. Шаги, зависящие от результатов других async-шагов, поместите в следующий набор.
+Sets execute in order. Sync steps execute sequentially on `mainDispatcher`; async steps within one set execute concurrently on `asyncDispatcher`. Every set finishes before the next starts. Put async work that depends on earlier results into a later set.
 
-## Запуск в Android
+## Android usage
 
-`run()` — suspend-функция. Запускайте её из `viewModelScope`, `lifecycleScope` или application scope согласно нужному времени жизни:
+`run()` is a suspend function. Use `viewModelScope`, `lifecycleScope`, or an application scope according to the desired lifetime:
 
 ```kotlin
 viewModelScope.launch {
     val result = DependencyInitializer(
         createProcess = { InitializationProcess() },
         stepSets = stepSets,
-        onStart = { /* показать загрузку */ },
-        onStartStep = { step -> /* обновить прогресс */ },
-        onSuccessStep = { step, stepNanos, totalNanos -> /* логировать время */ },
-        onSuccess = { result, totalNanos -> /* сохранить result.container */ },
-        onError = { error, process, step, totalNanos -> /* показать ошибку */ },
+        onStart = { /* Show loading. */ },
+        onStartStep = { step -> /* Update progress. */ },
+        onSuccessStep = { step, stepNanos, totalNanos -> /* Record timing. */ },
+        onSuccess = { result, totalNanos -> /* Store result.container. */ },
+        onError = { error, process, step, totalNanos -> /* Show the error. */ },
     ).run()
-    // result == null после ошибки шага; иначе доступен result.container.
+    // A step failure returns null; a successful result contains the container.
 }
 ```
 
-Производство процесса, синхронные шаги, получение `toContainer` и все callbacks выполняются на `Dispatchers.Main.immediate` по умолчанию. Асинхронные шаги — на `Dispatchers.Default`; для блокирующего IO у конкретного шага задайте `dispatcher = Dispatchers.IO`. `mainDispatcher` и `asyncDispatcher` можно подменить при тестировании. Dispatcher для main должен выполнять callbacks последовательно.
+Process creation, sync steps, container conversion, and callbacks use `Dispatchers.Main.immediate` by default. Async steps use `Dispatchers.Default`; give a blocking step `dispatcher = Dispatchers.IO`. Inject `mainDispatcher` and `asyncDispatcher` for tests. The main dispatcher must serialize callbacks.
 
-Процесс разделяется между async-шагами. Kotlin не проверяет Swift `Sendable`/`MainActor` на уровне компилятора: изменения общих полей процесса переносите на main через `withContext`, как в примере, либо синхронизируйте собственную модель. Не блокируйте main длительными синхронными шагами. [Документация Dispatchers.Main](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-dispatchers/-main.html).
+Async steps share the process. Move shared-field updates to the main dispatcher with `withContext`, or synchronize your model. Do not block the main dispatcher with long-running synchronous work.
 
-## Ошибки и отмена
+## Errors and cancellation
 
-Ошибка синхронного шага прекращает текущий набор и все последующие. При ошибках async-шагов `onError` вызывается только для первой зарегистрированной ошибки, а уже запущенные соседние шаги завершаются; успешные соседи всё ещё вызывают `onSuccessStep`. Следующие наборы не запускаются. Итоговый контейнер и `onSuccess` не создаются после ошибки; `run()` возвращает `null`.
+A sync step failure stops the current set and all subsequent sets. For async failures, `onError` reports the first registered exception once; already started peers finish and successful peers still invoke `onSuccessStep`. Later sets are skipped, no container is produced, and `run()` returns `null`.
 
-`onError` получает исходное исключение, тот же экземпляр процесса, конкретный шаг и общее время. Без `onError` ошибка шага также приводит к `null`. Для retry после неудачи снова вызовите `initializer.run()` — он создаёт новый процесс каждый раз.
+`onError` receives the original exception, process, failed step, and total time. Without a callback, a step failure still returns `null`. Retry a failed run with `initializer.run()`, which creates a fresh process each time.
 
-Отмена вызывающей корутины отменяет весь запуск и дочерние async-задачи. `CancellationException` пробрасывается и не вызывает `onError`/`onSuccess`; отмена отдельного async-шага также прекращает запуск. Используется cancellable `awaitAll`, включая распространение отмены. [Документация awaitAll](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/await-all.html).
+Cancelling the caller cancels the run and its children. `CancellationException` propagates without invoking `onError` or `onSuccess`; cancellation of an individual async step also stops the run.
 
-Callbacks должны завершаться без исключений. Ошибки callbacks, `createProcess`, `toContainer` и фатальные JVM `Error` пробрасываются вызывающей корутине, поскольку они не являются ошибками конкретного шага. Обычные исключения тела шага обрабатываются через `onError`. Не запускайте повторную инициализацию с тем же изменяемым процессом одновременно.
+Callbacks should not throw. Exceptions from callbacks, the process factory, container conversion, and fatal JVM `Error` instances propagate to the caller. Ordinary step exceptions are delivered to `onError`. Do not run simultaneous initializations with the same mutable process.
 
-## Повторная инициализация
+## Reinitialization
 
 ```kotlin
-val repeated = result.runRepeat() // Все исходные наборы, новый процесс.
+val repeated = result.runRepeat() // All original sets with a fresh process.
 
 val sandbox = result.runRepeat(
     createProcess = { InitializationProcess(environment = "Sandbox") },
-    stepSets = result.repeatStepSets, // Только шаги REPEATABLE.
-    onSuccess = { newResult, _ -> /* заменить контейнер */ },
+    stepSets = result.repeatStepSets, // Only REPEATABLE steps.
+    onSuccess = { newResult, _ -> /* Replace the container. */ },
 )
 ```
 
-Поведение соответствует фактическому Swift-коду: **`runRepeat()` без параметров запускает все исходные наборы**, включая `SIMPLE`. `repeatStepSets` — отдельный список, который фильтрует только `REPEATABLE`, сохраняя порядок и вид наборов; пустые после фильтрации наборы не входят в список.
+Calling `runRepeat()` without overrides runs all original sets, including `SIMPLE`. `repeatStepSets` filters `REPEATABLE` steps while preserving order and set kind, omitting sets that become empty.
 
-Чтобы повторить только эти шаги, передайте `stepSets = result.repeatStepSets` и фабрику процесса, содержащего необходимые зависимости из простых шагов. В `sample` смена окружения создаёт новый процесс с прежней базой данных, затем повторно создаёт repository и загружает данные. Пустой `repeatStepSets` нельзя передать в initializer: в таком случае повторяемых шагов нет.
+To run only repeatable work, pass `result.repeatStepSets` and a process factory seeded with dependencies required from simple steps. The sample's environment switch retains the existing database this way. Do not initialize with an empty filtered list.
 
-Каждый ненулевой параметр `runRepeat` заменяет соответствующую фабрику, наборы или callback; `null` наследует прежнее значение. Для отключения унаследованного callback передайте пустую lambda. У повторного результата сохраняется конфигурация именно его запуска, поэтому дальнейшие повторы используют последние overrides.
+Non-null overrides replace the inherited factory, sets, or callbacks. A null value inherits the previous configuration. Pass an empty lambda to disable an inherited callback. Further repeats use the configuration of the most recent successful result.
 
-## Соответствие Swift API
+## Aliases and timing
 
-| Swift | Kotlin |
-|---|---|
-| `DependencyInitializationProcess` с associatedtype | `DependencyInitializationProcess<T>` |
-| `SyncInitializationStep` / `AsyncInitializationStep` | Те же имена и поле `run` |
-| `.simple` / `.repeatable` | `SIMPLE` / `REPEATABLE` |
-| `StepSet(sync:)` / `StepSet(async:)` | `StepSet(sync = ...)` / `StepSet(async = ...)` |
-| `TaskPriority` | `dispatcher`, выбирающий контекст выполнения |
-| `MainActor` | `mainDispatcher`, по умолчанию Main.immediate |
-| `run() async → Void` | `suspend run() → DIResult<P,T>?` и прежние callbacks |
-| `result.runRepeat` — async closure | `result.runRepeat(...)` — suspend-метод с именованными параметрами |
+Aliases include `DIProcess`, `DIStep`, `DIStepType`, `StepSet`, `DIStepSet`, `DIResult`, and `DIRepeatCallback`. The process type and its container type are checked by the compiler.
 
-Сохранены aliases `DIProcess`, `DIStep`, `DIStepType`, `StepSet`, `DIStepSet`, `DIResult`, `DIRepeatCallback`. `run` дополнительно возвращает результат, чтобы им можно было пользоваться без callback. Kotlin проверяет соответствие типа контейнера типу процесса.
+Durations are `Double` nanoseconds measured with a monotonic clock. Divide by `1_000_000.0` for milliseconds or `1_000_000_000.0` for seconds. Async step time includes execution and delivery to the main dispatcher, excluding time waiting for the worker to start. Total time begins after process creation and includes callbacks.
 
-Как в Swift `TimeDispatcher`, durations — **Double в наносекундах**, отсчитанные по монотонным часам. Для миллисекунд разделите на `1_000_000.0`, для секунд — на `1_000_000_000.0`. Async step duration включает выполнение шага и передачу результата на main, но не ожидание до старта worker; общее время начинается после создания процесса и включает callbacks.
+## Example and checks
 
-## Пример, проверки и GitHub
+Run `sample` in Android Studio. Its repository simulates data with `delay`, so it works offline. Build with `./gradlew :sample:assembleDebug`; the APK is in `sample/build/outputs/apk/debug/`.
 
-Откройте каталог в Android Studio и запустите модуль `sample`. Данные repository имитируются локально через `delay`, поэтому пример работает без сети. APK после `./gradlew :sample:assembleDebug` находится в `sample/build/outputs/apk/debug/`.
-
-Тесты проверяют порядок шагов и callbacks, параллельность и барьеры между наборами, ошибки и отмену, фильтрацию и полный/частичный repeat, время в наносекундах, реальные потоки callbacks, dispatcher отдельного шага и защиту списков от изменения. GitHub Actions собирает Android-пример, выполняет тесты, Lint и локальную Maven-публикацию.
-
-Git-репозиторий общий для Swift и Kotlin. Git-команды выполняйте из корня проекта; GitHub Actions находятся в `../.github/`.
-
-Удалённая Maven-публикация требует отдельной настройки адреса и credentials; `publishToMavenLocal` уже настроен.
+Tests cover ordering and callbacks, concurrency and set barriers, errors and cancellation, repeats, timing, callback threads, per-step dispatchers, and protection against mutable input lists.

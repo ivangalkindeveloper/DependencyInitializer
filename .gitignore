@@ -22,3 +22,11 @@ local.properties
 *.iml
 *.jks
 *.keystore
+
+# Dart / Flutter generated and local files.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+pubspec.lock
