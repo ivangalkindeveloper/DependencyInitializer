@@ -13,6 +13,7 @@ This major release combines Swift, Kotlin / Android, and Dart / Flutter implemen
 - Align the Swift release tag, Kotlin library version, Dart package version, and example versions at `4.0.0`.
 - Provide English usage guides for each implementation and a root README focused on platform differences.
 - Add GitHub Actions checks for Swift and Kotlin / Android.
+- Configure Android SDK setup to install `platform-tools` without requesting the removed `tools` package.
 
 ### Migration
 
