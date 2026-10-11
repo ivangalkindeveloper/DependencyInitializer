@@ -1,8 +1,8 @@
-package io.github.ivangalkindeveloper.dependencyinitializer.sample
+package io.ivangalkindeveloper.dependencyinitializer.sample
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.ivangalkindeveloper.dependencyinitializer.*
+import io.ivangalkindeveloper.dependencyinitializer.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

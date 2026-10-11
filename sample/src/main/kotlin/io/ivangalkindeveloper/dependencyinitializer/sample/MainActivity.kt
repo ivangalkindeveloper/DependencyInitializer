@@ -1,4 +1,4 @@
-package io.github.ivangalkindeveloper.dependencyinitializer.sample
+package io.ivangalkindeveloper.dependencyinitializer.sample
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

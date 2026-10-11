@@ -25,7 +25,7 @@ sdk.dir=/absolute/path/to/Android/sdk
 
 ```kotlin
 dependencies {
-    implementation("io.github.ivangalkindeveloper:dependency-initializer:1.0.0")
+    implementation("io.ivangalkindeveloper:dependency-initializer:1.0.0")
 }
 ```
 
@@ -34,7 +34,7 @@ dependencies {
 ## Контейнер, процесс и шаги
 
 ```kotlin
-import io.github.ivangalkindeveloper.dependencyinitializer.*
+import io.ivangalkindeveloper.dependencyinitializer.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

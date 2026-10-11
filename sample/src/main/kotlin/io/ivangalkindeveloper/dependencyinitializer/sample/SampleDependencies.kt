@@ -1,6 +1,6 @@
-package io.github.ivangalkindeveloper.dependencyinitializer.sample
+package io.ivangalkindeveloper.dependencyinitializer.sample
 
-import io.github.ivangalkindeveloper.dependencyinitializer.*
+import io.ivangalkindeveloper.dependencyinitializer.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

@@ -1,4 +1,4 @@
-package io.github.ivangalkindeveloper.dependencyinitializer
+package io.ivangalkindeveloper.dependencyinitializer
 
 typealias DIProcess<T> = DependencyInitializationProcess<T>
 typealias DIStep = DependencyInitializationStep

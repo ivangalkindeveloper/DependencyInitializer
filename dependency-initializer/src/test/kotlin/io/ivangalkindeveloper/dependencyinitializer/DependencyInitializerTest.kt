@@ -1,4 +1,4 @@
-package io.github.ivangalkindeveloper.dependencyinitializer
+package io.ivangalkindeveloper.dependencyinitializer
 
 import java.util.concurrent.Executors
 import kotlin.test.*

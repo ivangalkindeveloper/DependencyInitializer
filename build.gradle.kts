@@ -6,6 +6,6 @@ plugins {
 }
 
 allprojects {
-    group = "io.github.ivangalkindeveloper"
+    group = "io.ivangalkindeveloper"
     version = "1.0.0"
 }

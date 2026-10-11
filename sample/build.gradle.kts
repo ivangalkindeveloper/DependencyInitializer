@@ -1,11 +1,11 @@
 plugins { id("com.android.application"); kotlin("android"); kotlin("plugin.compose") }
 
 android {
-    namespace = "io.github.ivangalkindeveloper.dependencyinitializer.sample"
+    namespace = "io.ivangalkindeveloper.dependencyinitializer.sample"
     compileSdk = 36
     defaultConfig {
         minSdk = 23
-        applicationId = "io.github.ivangalkindeveloper.dependencyinitializer.sample"
+        applicationId = "io.ivangalkindeveloper.dependencyinitializer.sample"
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
