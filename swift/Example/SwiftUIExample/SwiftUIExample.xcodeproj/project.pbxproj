@@ -101,7 +101,7 @@
 			mainGroup = 778BF3702DCA9EA2008929EC;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				779CBB5D2DCC201500636469 /* XCLocalSwiftPackageReference "../../../DependencyInitializer" */,
+				779CBB5D2DCC201500636469 /* XCLocalSwiftPackageReference "../.." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 778BF37A2DCA9EA2008929EC /* Products */;
@@ -331,9 +331,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		779CBB5D2DCC201500636469 /* XCLocalSwiftPackageReference "../../../DependencyInitializer" */ = {
+		779CBB5D2DCC201500636469 /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../DependencyInitializer;
+			relativePath = ../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 

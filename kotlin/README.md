@@ -1,5 +1,7 @@
 # DependencyInitializer для Kotlin / Android
 
+Эта реализация находится в общем репозитории DependencyInitializer. [Обзор проекта и Swift-версия](../README.md). Все команды ниже выполняются из каталога `kotlin/`; открывайте его в Android Studio.
+
 Порт Swift-пакета `DependencyInitializer`: сборка контейнера зависимостей через процесс инициализации, последовательные наборы шагов, параллельные асинхронные шаги, callbacks, обработка ошибок, измерение времени и повторный запуск.
 
 Модули:
@@ -29,7 +31,7 @@ dependencies {
 }
 ```
 
-Альтернативное подключение исходников: `includeBuild("/absolute/path/to/KotlinGitHub/DependencyInitializer")` в settings; строка зависимости остаётся той же. Библиотека не зависит от Handler, Router или Compose. `kotlinx-coroutines-android` подключается транзитивно для главного dispatcher; в обычном JVM-проекте передайте свой `mainDispatcher`.
+Альтернативное подключение исходников: `includeBuild("/absolute/path/to/DependencyInitializer/kotlin")` в settings; строка зависимости остаётся той же. Библиотека не зависит от Handler, Router или Compose. `kotlinx-coroutines-android` подключается транзитивно для главного dispatcher; в обычном JVM-проекте передайте свой `mainDispatcher`.
 
 ## Контейнер, процесс и шаги
 
@@ -146,11 +148,6 @@ val sandbox = result.runRepeat(
 
 Тесты проверяют порядок шагов и callbacks, параллельность и барьеры между наборами, ошибки и отмену, фильтрацию и полный/частичный repeat, время в наносекундах, реальные потоки callbacks, dispatcher отдельного шага и защиту списков от изменения. GitHub Actions собирает Android-пример, выполняет тесты, Lint и локальную Maven-публикацию.
 
-Создайте пустой репозиторий, например `kotlin-dependency-initializer`, и выполните в этом каталоге:
-
-```sh
-git remote add origin git@github.com:YOUR_USERNAME/kotlin-dependency-initializer.git
-git push -u origin main
-```
+Git-репозиторий общий для Swift и Kotlin. Git-команды выполняйте из корня проекта; GitHub Actions находятся в `../.github/`.
 
 Удалённая Maven-публикация требует отдельной настройки адреса и credentials; `publishToMavenLocal` уже настроен.

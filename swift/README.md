@@ -1,4 +1,8 @@
 # Dependency initializer
+
+This is the Swift implementation. See the [project overview and Kotlin version](../README.md). The repository root and this directory both support Swift Package Manager.
+
+The original UIKit and SwiftUI apps in `Example/` still use the removed `InitializationStep` API and currently do not build. They need migration to `StepSet`, `SyncInitializationStep` and `AsyncInitializationStep`; the library and its tests build independently.
 DependencyInitializer is a convenient and understandable contract for initializing dependencies.\
 The main goal is to provide a clear assembly of a dependency container with initialization steps.\
 Advantages:
@@ -32,7 +36,7 @@ github "ivangalkindeveloper/DependencyInitializer"
 For projects with [Swift Package Manager](https://github.com/apple/swift-package-manager):
 ```
 dependencies: [
-    .package(url: "https://github.com/ivangalkindeveloper/DependencyInitializer.git", from: "master")
+    .package(url: "https://github.com/ivangalkindeveloper/DependencyInitializer.git", branch: "master")
 ]
 ```
 
@@ -88,13 +92,13 @@ The initializer runs an ordered list of **stepSets**. Each `StepSet` contains ei
 
 This lets you compose any pipeline, e.g. sync → async → sync → async, where each async set only starts after the previous set has fully completed.
 
-[DependencyInitializationStepType](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStepType.swift) - step execution type:\
+[DependencyInitializationStepType](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStepType.swift) - step execution type:\
 simple - the step is executed once (e.g. for initializing Firebase, database and other integration packages).\
 repeatable - the step is executed and remembered for re-initialization when calling runRepeat.
 
-[SyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - synchronous step (for a sync `StepSet`).\
-[AsyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStep.swift) - asynchronous step (for an async `StepSet`).\
-[StepSet](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/Sources/DependencyInitializer/DependencyInitializationStepSet.swift) - a set of only synchronous (`StepSet(sync:)`) or only asynchronous (`StepSet(async:)`) steps.
+[SyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStep.swift) - synchronous step (for a sync `StepSet`).\
+[AsyncInitializationStep](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStep.swift) - asynchronous step (for an async `StepSet`).\
+[StepSet](https://github.com/ivangalkindeveloper/DependencyInitializer/blob/master/swift/Sources/DependencyInitializer/DependencyInitializationStepSet.swift) - a set of only synchronous (`StepSet(sync:)`) or only asynchronous (`StepSet(async:)`) steps.
 
 Prepare the step sets:
 ```swift

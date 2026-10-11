@@ -114,7 +114,7 @@
 			mainGroup = 778BF34F2DCA9E7A008929EC;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				778BF3972DCAB85B008929EC /* XCLocalSwiftPackageReference "../../../DependencyInitializer" */,
+				778BF3972DCAB85B008929EC /* XCLocalSwiftPackageReference "../.." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 778BF3592DCA9E7A008929EC /* Products */;
@@ -342,16 +342,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		778BF3972DCAB85B008929EC /* XCLocalSwiftPackageReference "../../../DependencyInitializer" */ = {
+		778BF3972DCAB85B008929EC /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../DependencyInitializer;
+			relativePath = ../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		77DA5D692DCBA8BF00065FB1 /* DependencyInitializer */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 778BF3972DCAB85B008929EC /* XCLocalSwiftPackageReference "../../../DependencyInitializer" */;
+			package = 778BF3972DCAB85B008929EC /* XCLocalSwiftPackageReference "../.." */;
 			productName = DependencyInitializer;
 		};
 /* End XCSwiftPackageProductDependency section */

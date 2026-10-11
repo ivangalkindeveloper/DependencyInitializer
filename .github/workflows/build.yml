@@ -1,10 +1,13 @@
-name: Build
+name: Build Kotlin
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kotlin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
