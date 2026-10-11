@@ -13,7 +13,7 @@ dependencies:
   dependency_initializer:
     git:
       url: https://github.com/ivangalkindeveloper/DependencyInitializer.git
-      ref: master
+      ref: v4.0.0
       path: dart
 ```
 

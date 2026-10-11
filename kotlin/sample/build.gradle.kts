@@ -7,8 +7,8 @@ android {
         minSdk = 23
         applicationId = "io.ivangalkindeveloper.dependencyinitializer.sample"
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "4.0.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

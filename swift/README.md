@@ -11,7 +11,7 @@ Requires Swift 6.0+, iOS 13+ or macOS 10.15+. Add the package with Swift Package
 ```swift
 .package(
     url: "https://github.com/ivangalkindeveloper/DependencyInitializer.git",
-    branch: "master"
+    from: "4.0.0"
 )
 ```
 

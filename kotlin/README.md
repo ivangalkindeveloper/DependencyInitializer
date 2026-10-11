@@ -24,7 +24,7 @@ Add `mavenLocal()` to the application's repositories, alongside `google()` and `
 
 ```kotlin
 dependencies {
-    implementation("io.ivangalkindeveloper:dependency-initializer:1.0.0")
+    implementation("io.ivangalkindeveloper:dependency-initializer:4.0.0")
 }
 ```
 
